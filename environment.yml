@@ -302,3 +302,4 @@ dependencies:
     - termcolor==1.1.0
     - tqdm==4.42.0
 prefix: /home/jack/anaconda3/envs/ssl-pggan
+

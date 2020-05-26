@@ -18,8 +18,8 @@ class EasyDict(dict):
 #----------------------------------------------------------------------------
 # Paths.
 
-data_dir = '/home/jack/JACK-GAN/'
-unlabeled_data_dir = '/home/jack/JACK-GAN/'
+data_dir = '/home/jack/SSL-PG-GAN/'
+unlabeled_data_dir = '/home/jack/SSL-PG-GAN/'
 result_dir = 'results'
 
 #----------------------------------------------------------------------------
@@ -37,7 +37,7 @@ env.TF_CPP_MIN_LOG_LEVEL                        = '1'       # 0 (default) = Prin
 # Official training configs, targeted mainly for CelebA-HQ.
 # To run, comment/uncomment the lines as appropriate and launch train.py.
 
-desc        = 'pgan'                                        # Description string included in result subdir name.
+desc        = 'ssl-pgan'                                        # Description string included in result subdir name.
 random_seed = 1000                                          # Global random seed.
 dataset     = EasyDict()                                    # Options for dataset.load_dataset().
 train       = EasyDict(func='train.train_progressive_gan')  # Options for main training func.
@@ -56,7 +56,8 @@ grid        = EasyDict(size='1080p', layout='random')       # Options for train.
 #desc += '-cifar10';             dataset = EasyDict(tfrecord_dir='cifar10')
 #desc += '-cifar100';            dataset = EasyDict(tfrecord_dir='cifar100')
 #desc += '-svhn';                dataset = EasyDict(tfrecord_dir='svhn')
-desc += '-cats';                dataset = EasyDict(tfrecord_dir='Labeled_data'); unlabeled_dataset = EasyDict(tfrecord_dir='Unlabeled_data')
+desc += '-catsvdogs';                dataset = EasyDict(tfrecord_dir='Labeled_data'); unlabeled_dataset = EasyDict(tfrecord_dir='Unlabeled_data')
+testingdataset = EasyDict(tfrecord_dir='testing')
 #desc += '-mnistrgb';            dataset = EasyDict(tfrecord_dir='mnistrgb')
 #desc += '-syn1024rgb';          dataset = EasyDict(class_name='dataset.SyntheticDataset', resolution=1024, num_channels=3)
 #desc += '-lsun-airplane';       dataset = EasyDict(tfrecord_dir='lsun-airplane-100k');       train.mirror_augment = True
@@ -127,7 +128,7 @@ desc += '-fp32'; sched.max_minibatch_per_gpu = {256: 16, 512: 8, 1024: 4}
 # Utility scripts.
 # To run, uncomment the appropriate line and launch train.py.
 
-#train = EasyDict(func='util_scripts.generate_fake_images', run_id=23, num_pngs=1000); num_gpus = 1; desc = 'fake-images-' + str(train.run_id)
+#train = EasyDict(func='util_scripts.generate_fake_images', run_id=0, num_pngs=10); num_gpus = 1; desc = 'fake-images-' + str(train.run_id)
 #train = EasyDict(func='util_scripts.generate_fake_images', run_id=23, grid_size=[15,8], num_pngs=10, image_shrink=4); num_gpus = 1; desc = 'fake-grids-' + str(train.run_id)
 #train = EasyDict(func='util_scripts.generate_interpolation_video', run_id=23, grid_size=[1,1], duration_sec=60.0, smoothing_sec=1.0); num_gpus = 1; desc = 'interpolation-video-' + str(train.run_id)
 #train = EasyDict(func='util_scripts.generate_training_video', run_id=23, duration_sec=20.0); num_gpus = 1; desc = 'training-video-' + str(train.run_id)

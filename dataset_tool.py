@@ -1,4 +1,4 @@
-# Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+
 #
 # This work is licensed under the Creative Commons Attribution-NonCommercial
 # 4.0 International License. To view a copy of this license, visit
@@ -646,7 +646,7 @@ def create_from_images(labeled_tfrecord_dir, unlabeled_tfrecord_dir, labeled_dir
     if channels not in [1, 3]:
         error('Input images must be stored as RGB or grayscale')
 
-    labels = [1] * 5 + [0] * 5
+    labels = [1] * 15 + [0] * 15
     labels = np.array(labels)
     onehot = np.zeros((labels.size, np.max(labels) + 1), dtype=np.float32)
     onehot[np.arange(labels.size), labels] = 1.0
@@ -665,7 +665,7 @@ def create_from_images(labeled_tfrecord_dir, unlabeled_tfrecord_dir, labeled_dir
 
     #  Adding unlabeled data
     with TFRecordExporter(unlabeled_tfrecord_dir, len(unlabeled_filenames)) as tfr2:
-        fake_labels = [2] * 20
+        fake_labels = [2] * 500
         fake_labels = np.array(fake_labels)
         fake_onehot = np.zeros((fake_labels.size, np.max(fake_labels) + 1), dtype=np.float32)
         fake_onehot[np.arange(fake_labels.size), fake_labels] = 1.0
@@ -801,6 +801,7 @@ def execute_cmdline(argv):
 
 if __name__ == "__main__":
     # execute_cmdline(sys.argv)
-    create_from_images("Labeled_data", "Unlabeled_data", "CatVDog/PetImages/Labeled/", "/home/jack/JACK-GAN/CatVDog/PetImages/Unlabeled", True)
+    create_from_images("Labeled_data", "Unlabeled_data", "CatVDog/PetImages/Labeled/", "CatVDog/PetImages/Unlabeled", True)
 
 # ----------------------------------------------------------------------------
+

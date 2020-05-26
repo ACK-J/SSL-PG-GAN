@@ -45,8 +45,6 @@ def D_wgangp_acgan(G, D, opt, training_set, minibatch_size, reals, labels, unlab
     wgan_epsilon    = 0.001,    # Weight for the epsilon term, \epsilon_{drift}.
     wgan_target     = 1.0,      # Target value for gradient magnitudes.
     cond_weight     = 1.0):     # Weight of the conditioning terms.
-    #unlabeled_reals = reals
-    #reals = unlabeled_reals
 
     latents = tf.random_normal([minibatch_size] + G.input_shapes[0][1:])
     fake_images_out = G.get_output_for(latents, labels, is_training=True)
@@ -55,18 +53,18 @@ def D_wgangp_acgan(G, D, opt, training_set, minibatch_size, reals, labels, unlab
     # Put unlabled_reals here
     unlabeled_real_scores_out, _ = fp32(D.get_output_for(unlabeled_reals, is_training=True))
     # Get the unsupervised loss of unlabeled real data (From Data-set)
-    epsilon = 1e-8  # used to avoid NAN loss
-    prob_real_be_real = 1 - unlabeled_real_scores_out + epsilon
-    tmp_log = tf.log(prob_real_be_real)
-    D_L_unsupervised = -1 * tf.reduce_mean(tmp_log)
-    # D_L_unsupervised = tfutil.autosummary('Loss/unlabeled real data', D_L_unsupervised)
+    #epsilon = 1e-8  # used to avoid NAN loss
+    #prob_real_be_real = 1 - unlabeled_real_scores_out + epsilon
+    #tmp_log = tf.log(prob_real_be_real)
+    #D_L_unsupervised = -1 * tf.reduce_mean(tmp_log)
+    unlabeled_real_scores_out = tfutil.autosummary('Loss/unlabeled_real_data', unlabeled_real_scores_out)
     #print('Loss/unlabeled real data', D_L_unsupervised)
 
 
     fake_scores_out, fake_labels_out = fp32(D.get_output_for(fake_images_out, is_training=True))
     real_scores_out = tfutil.autosummary('Loss/real_scores', real_scores_out)
     fake_scores_out = tfutil.autosummary('Loss/fake_scores', fake_scores_out)
-    loss = fake_scores_out - real_scores_out - D_L_unsupervised
+    loss = fake_scores_out - real_scores_out - unlabeled_real_scores_out
 
     with tf.name_scope('GradientPenalty'):
         mixing_factors = tf.random_uniform([minibatch_size, 1, 1, 1], 0.0, 1.0, dtype=fake_images_out.dtype)
