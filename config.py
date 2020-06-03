@@ -18,8 +18,8 @@ class EasyDict(dict):
 #----------------------------------------------------------------------------
 # Paths.
 
-data_dir = '/home/jack/SSL-PG-GAN/'
-unlabeled_data_dir = '/home/jack/SSL-PG-GAN/'
+data_dir = '/home/jxh3105/SSL-PG-GAN/'
+unlabeled_data_dir = '/home/jxh3105/SSL-PG-GAN/'
 result_dir = 'results'
 
 #----------------------------------------------------------------------------
@@ -56,7 +56,7 @@ grid        = EasyDict(size='1080p', layout='random')       # Options for train.
 #desc += '-cifar10';             dataset = EasyDict(tfrecord_dir='cifar10')
 #desc += '-cifar100';            dataset = EasyDict(tfrecord_dir='cifar100')
 #desc += '-svhn';                dataset = EasyDict(tfrecord_dir='svhn')
-desc += '-catsvdogs';                dataset = EasyDict(tfrecord_dir='Labeled_data'); unlabeled_dataset = EasyDict(tfrecord_dir='Unlabeled_data')
+desc += '-catsvdogs';            dataset = EasyDict(tfrecord_dir='Labeled_data'); unlabeled_dataset = EasyDict(tfrecord_dir='Unlabeled_data')
 testingdataset = EasyDict(tfrecord_dir='testing')
 #desc += '-mnistrgb';            dataset = EasyDict(tfrecord_dir='mnistrgb')
 #desc += '-syn1024rgb';          dataset = EasyDict(class_name='dataset.SyntheticDataset', resolution=1024, num_channels=3)

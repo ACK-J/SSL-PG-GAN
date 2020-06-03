@@ -101,7 +101,7 @@ class TrainingSchedule:
         tick_kimg_dict          = {4: 160, 8:140, 16:120, 32:100, 64:80, 128:60, 256:40, 512:20, 1024:10}): # Resolution-specific overrides.
 
         # Training phase.
-        self.kimg = cur_nimg / 100.0
+        self.kimg = cur_nimg / 1000.0
         phase_dur = lod_training_kimg + lod_transition_kimg
         phase_idx = int(np.floor(self.kimg / phase_dur)) if phase_dur > 0 else 0
         phase_kimg = self.kimg - phase_idx * phase_dur
@@ -201,7 +201,7 @@ def train_progressive_gan(
 
     print('Setting up snapshot image grid...')
     grid_size, grid_reals, grid_labels, grid_latents = setup_snapshot_image_grid(G, training_set, **config.grid)
-    sched = TrainingSchedule(total_kimg * 100, training_set, **config.sched)
+    sched = TrainingSchedule(total_kimg * 1000, training_set, **config.sched)
     grid_fakes = Gs.run(grid_latents, grid_labels, minibatch_size=sched.minibatch//config.num_gpus)
 
     print('Setting up result dir...')
@@ -215,13 +215,13 @@ def train_progressive_gan(
         G.setup_weight_histograms(); D.setup_weight_histograms()
 
     print('Training...')
-    cur_nimg = int(resume_kimg * 100)
+    cur_nimg = int(resume_kimg * 1000)
     cur_tick = 0
     tick_start_nimg = cur_nimg
     tick_start_time = time.time()
     train_start_time = tick_start_time - resume_time
     prev_lod = -1.0
-    while cur_nimg < total_kimg * 100:
+    while cur_nimg < total_kimg * 1000:
 
         # Choose training parameters and configure training ops.
         sched = TrainingSchedule(cur_nimg, training_set, **config.sched)
@@ -241,11 +241,11 @@ def train_progressive_gan(
             tfutil.run([G_train_op], {lod_in: sched.lod, lrate_in: sched.G_lrate, minibatch_in: sched.minibatch})
 
         # Perform maintenance tasks once per tick.
-        done = (cur_nimg >= total_kimg * 100)
-        if cur_nimg >= tick_start_nimg + sched.tick_kimg * 100 or done:
+        done = (cur_nimg >= total_kimg * 1000)
+        if cur_nimg >= tick_start_nimg + sched.tick_kimg * 1000 or done:
             cur_tick += 1
             cur_time = time.time()
-            tick_kimg = (cur_nimg - tick_start_nimg) / 100.0
+            tick_kimg = (cur_nimg - tick_start_nimg) / 1000.0
             tick_start_nimg = cur_nimg
             tick_time = cur_time - tick_start_time
             total_time = cur_time - train_start_time
@@ -255,7 +255,7 @@ def train_progressive_gan(
             # Report progress.
             print('tick %-5d kimg %-8.1f lod %-5.2f minibatch %-4d time %-12s sec/tick %-7.1f sec/kimg %-7.2f maintenance %.1f' % (
                 tfutil.autosummary('Progress/tick', cur_tick),
-                tfutil.autosummary('Progress/kimg', cur_nimg / 100.0),
+                tfutil.autosummary('Progress/kimg', cur_nimg / 1000.0),
                 tfutil.autosummary('Progress/lod', sched.lod),
                 tfutil.autosummary('Progress/minibatch', sched.minibatch),
                 misc.format_time(tfutil.autosummary('Timing/total_sec', total_time)),
@@ -269,9 +269,9 @@ def train_progressive_gan(
             # Save snapshots.
             if cur_tick % image_snapshot_ticks == 0 or done:
                 grid_fakes = Gs.run(grid_latents, grid_labels, minibatch_size=sched.minibatch//config.num_gpus)
-                misc.save_image_grid(grid_fakes, os.path.join(result_subdir, 'fakes%06d.png' % (cur_nimg // 100)), drange=drange_net, grid_size=grid_size)
+                misc.save_image_grid(grid_fakes, os.path.join(result_subdir, 'fakes%06d.png' % (cur_nimg // 1000)), drange=drange_net, grid_size=grid_size)
             if cur_tick % network_snapshot_ticks == 0 or done:
-                misc.save_pkl((G, D, Gs), os.path.join(result_subdir, 'network-snapshot-%06d.pkl' % (cur_nimg // 100)))
+                misc.save_pkl((G, D, Gs), os.path.join(result_subdir, 'network-snapshot-%06d.pkl' % (cur_nimg // 1000)))
 
             # Record start time of the next tick.
             tick_start_time = time.time()

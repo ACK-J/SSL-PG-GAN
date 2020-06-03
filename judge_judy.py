@@ -1,11 +1,10 @@
-import os
+mport os
 import numpy as np
 import tensorflow as tf
 import glob
 import dataset
 import config
 import tfutil
-import sys
 import misc
 from train import process_reals
 import PIL.Image
@@ -134,17 +133,42 @@ def use_discriminator(run_id, testing_dataset, snapshot=None):
     network_pkl = misc.locate_network_pkl(run_id, snapshot)
     print('Loading network from "%s"...' % network_pkl)
     G, D, Gs = misc.load_network_pkl(run_id, snapshot)
-    scores, labels = fp32(D.get_output_for(testing_dataset, is_training=True))
+
+    imported_graph = tf.get_default_graph()
+    graph_op = imported_graph.get_operations()
+    with open('output.txt', 'w') as f:
+        for i in graph_op:
+            f.write(str(i))
+
+    scores, labels = fp32(D.get_output_for(testing_dataset, is_training=False))
     return (scores, labels)
-        
+
+
+def test_discriminator(run_id, tensor, snapshot=None):
+    network_pkl = misc.locate_network_pkl(run_id, snapshot)
+    print('Loading network from "%s"...' % network_pkl)
+    G, D, Gs = misc.load_network_pkl(run_id, snapshot)
+    scores, labels = fp32(D.get_output_for(tensor, is_training=False))
+    return (scores, labels)
+
+
 if __name__ == '__main__':
+    np.random.seed(config.random_seed)
+    print('Initializing TensorFlow...')
+    os.environ.update(config.env)
+    tfutil.init_tf(config.tf_config)
+    tensor = np.zeros((1, 3, 512, 512))
+    scores, labels = test_discriminator(3, tensor)
+    print(labels.eval())
+
+    exit()
     # Make sure that all the images in this directory are square and
     # a power of 2. ex) 512X512 or 32X32
     data_dir = "CatVDog/PetImages/Cat10P"
-    RUN_ID = 0
+    RUN_ID = 37
 
     #  Takes in a directory full of square images
-    create_from_images("testing", data_dir, True)
+    #create_from_images("testing", data_dir, True)
 
     np.random.seed(config.random_seed)
     print('Initializing TensorFlow...')
@@ -170,7 +194,9 @@ if __name__ == '__main__':
             reals_gpu = process_reals(reals_split[gpu], lod_in, mirror_augment, training_set.dynamic_range, drange_net)
             scores, labels = use_discriminator(RUN_ID, reals_gpu, snapshot=None)
             real_scores_out = tfutil.autosummary('Loss/real_scores', scores)
-            print(real_scores_out)
-            tf.print(real_scores_out)
+            lodin_placeholder = tf.get_default_graph().get_tensor_by_name('Inputs/lod_in:0')
+            print(real_scores_out.eval(feed_dict={lodin_placeholder: 4}))
+            #tf.print(real_scores_out)
+
 
 

@@ -301,5 +301,5 @@ dependencies:
     - tensorflow-gpu==1.14.0
     - termcolor==1.1.0
     - tqdm==4.42.0
-prefix: /home/jack/anaconda3/envs/ssl-pggan
+prefix: /home/jxh3105/anaconda3/envs/ssl-pggan
 
