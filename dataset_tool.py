@@ -626,7 +626,7 @@ def create_celebahq(tfrecord_dir, celeba_dir, delta_dir, num_threads=4, num_task
 
 # ----------------------------------------------------------------------------
 
-def create_from_images(labeled_tfrecord_dir, unlabeled_tfrecord_dir, labeled_dir, unlabeled_dir, shuffle):
+def create_from_images(labeled_tfrecord_dir, unlabeled_tfrecord_dir, labeled_dir, unlabeled_dir, shuffle, Num_classes):
     print('Loading images from "%s"' % labeled_dir)
     labeled_filenames = sorted(glob.glob(os.path.join(labeled_dir, '*')))
     print('Loading images from "%s"' % unlabeled_dir)
@@ -648,7 +648,7 @@ def create_from_images(labeled_tfrecord_dir, unlabeled_tfrecord_dir, labeled_dir
 
     labels = [1] * 15 + [0] * 15
     labels = np.array(labels)
-    onehot = np.zeros((labels.size, np.max(labels) + 1), dtype=np.float32)
+    onehot = np.zeros((labels.size, Num_classes + 1), dtype=np.float32)
     onehot[np.arange(labels.size), labels] = 1.0
 
     #  Adding labeled data
@@ -801,7 +801,7 @@ def execute_cmdline(argv):
 
 if __name__ == "__main__":
     # execute_cmdline(sys.argv)
-    create_from_images("Labeled_data", "Unlabeled_data", "CatVDog/PetImages/Labeled/", "CatVDog/PetImages/Unlabeled", True)
+    create_from_images("Labeled_data", "Unlabeled_data", "CatVDog/PetImages/Labeled/", "CatVDog/PetImages/Unlabeled", False, 2)
 
 # ----------------------------------------------------------------------------
 
