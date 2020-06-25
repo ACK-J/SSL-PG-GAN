@@ -18,8 +18,8 @@ class EasyDict(dict):
 #----------------------------------------------------------------------------
 # Paths.
 
-data_dir = '/home/USERNAME/SSL-PG-GAN/'
-unlabeled_data_dir = '/home/USERNAME/SSL-PG-GAN/'
+data_dir = '/home/USERNAME/SSL-PG-GAN/'			# CHANGE ME
+unlabeled_data_dir = '/home/USERNAME/SSL-PG-GAN/'	# CHANGE ME
 result_dir = 'results'
 
 #----------------------------------------------------------------------------
