@@ -1,5 +1,3 @@
-
-#
 # This work is licensed under the Creative Commons Attribution-NonCommercial
 # 4.0 International License. To view a copy of this license, visit
 # http://creativecommons.org/licenses/by-nc/4.0/ or send a letter to
@@ -14,8 +12,11 @@ import six.moves.queue as Queue
 import traceback
 import numpy as np
 import tensorflow as tf
-import PIL.Image
+import warnings
+warnings.filterwarnings('ignore',category=FutureWarning)
+warnings.filterwarnings('ignore', category=DeprecationWarning)
 
+import PIL.Image
 import tfutil
 import dataset
 
@@ -294,349 +295,40 @@ def compare(tfrecord_dir_a, tfrecord_dir_b, ignore_labels):
         print('Identical labels: %d / %d' % (identical_labels, idx))
 
 
-# ----------------------------------------------------------------------------
+def create_from_images(labeled_tfrecord_dir, unlabeled_tfrecord_dir, labeled_dir, unlabeled_dir, shuffle):
+    # This lists all of the directories in the provided labeled directory. Each class should have its own folder
+    # within this directory. It also prepends the full path before it and makes sure .git isn't included
+    classes_dir = [labeled_dir + name for name in os.listdir(labeled_dir) if os.path.isdir(os.path.join(labeled_dir, name)) and name != '.git']
+    Num_classes = len(classes_dir)
 
-def create_mnist(tfrecord_dir, mnist_dir):
-    print('Loading MNIST from "%s"' % mnist_dir)
-    import gzip
-    with gzip.open(os.path.join(mnist_dir, 'train-images-idx3-ubyte.gz'), 'rb') as file:
-        images = np.frombuffer(file.read(), np.uint8, offset=16)
-    with gzip.open(os.path.join(mnist_dir, 'train-labels-idx1-ubyte.gz'), 'rb') as file:
-        labels = np.frombuffer(file.read(), np.uint8, offset=8)
-    images = images.reshape(-1, 1, 28, 28)
-    images = np.pad(images, [(0, 0), (0, 0), (2, 2), (2, 2)], 'constant', constant_values=0)
-    assert images.shape == (60000, 1, 32, 32) and images.dtype == np.uint8
-    assert labels.shape == (60000,) and labels.dtype == np.uint8
-    assert np.min(images) == 0 and np.max(images) == 255
-    assert np.min(labels) == 0 and np.max(labels) == 9
-    onehot = np.zeros((labels.size, np.max(labels) + 1), dtype=np.float32)
-    onehot[np.arange(labels.size), labels] = 1.0
-
-    with TFRecordExporter(tfrecord_dir, images.shape[0]) as tfr:
-        order = tfr.choose_shuffled_order()
-        for idx in range(order.size):
-            tfr.add_image(images[order[idx]])
-        tfr.add_labels(onehot[order])
-
-
-# ----------------------------------------------------------------------------
-
-def create_mnistrgb(tfrecord_dir, mnist_dir, num_images=1000000, random_seed=123):
-    print('Loading MNIST from "%s"' % mnist_dir)
-    import gzip
-    with gzip.open(os.path.join(mnist_dir, 'train-images-idx3-ubyte.gz'), 'rb') as file:
-        images = np.frombuffer(file.read(), np.uint8, offset=16)
-    images = images.reshape(-1, 28, 28)
-    images = np.pad(images, [(0, 0), (2, 2), (2, 2)], 'constant', constant_values=0)
-    assert images.shape == (60000, 32, 32) and images.dtype == np.uint8
-    assert np.min(images) == 0 and np.max(images) == 255
-
-    with TFRecordExporter(tfrecord_dir, num_images) as tfr:
-        rnd = np.random.RandomState(random_seed)
-        for idx in range(num_images):
-            tfr.add_image(images[rnd.randint(images.shape[0], size=3)])
-
-
-# ----------------------------------------------------------------------------
-
-def create_cifar10(tfrecord_dir, cifar10_dir):
-    print('Loading CIFAR-10 from "%s"' % cifar10_dir)
-    import pickle
-    images = []
+    labeled_filenames = []
+    # Go through each class directory and list all the full paths to each file and store them in an array
+    for each_class in classes_dir:
+        print('Loading images from "%s"' % each_class)
+        labeled_filenames.append(list(sorted(glob.glob(os.path.join(each_class, '*')))))
+    # Go through that array and assign Labels to each image
     labels = []
-    for batch in range(1, 6):
-        with open(os.path.join(cifar10_dir, 'data_batch_%d' % batch), 'rb') as file:
-            data = pickle.load(file, encoding='latin1')
-        images.append(data['data'].reshape(-1, 3, 32, 32))
-        labels.append(data['labels'])
-    images = np.concatenate(images)
-    labels = np.concatenate(labels)
-    assert images.shape == (50000, 3, 32, 32) and images.dtype == np.uint8
-    assert labels.shape == (50000,) and labels.dtype == np.int32
-    assert np.min(images) == 0 and np.max(images) == 255
-    assert np.min(labels) == 0 and np.max(labels) == 9
-    onehot = np.zeros((labels.size, np.max(labels) + 1), dtype=np.float32)
+    for i in range(Num_classes):
+        labels += [i] * len(labeled_filenames[i])
+    print("Number of classes: " + str(len(classes_dir)) + "\n")
+    # Converting labels into np array and one hot encoding it
+    labels = np.array(labels)
+    onehot = np.zeros((labels.size, Num_classes + 1), dtype=np.float32)
     onehot[np.arange(labels.size), labels] = 1.0
 
-    with TFRecordExporter(tfrecord_dir, images.shape[0]) as tfr:
-        order = tfr.choose_shuffled_order()
-        for idx in range(order.size):
-            tfr.add_image(images[order[idx]])
-        tfr.add_labels(onehot[order])
 
-
-# ----------------------------------------------------------------------------
-
-def create_cifar100(tfrecord_dir, cifar100_dir):
-    print('Loading CIFAR-100 from "%s"' % cifar100_dir)
-    import pickle
-    with open(os.path.join(cifar100_dir, 'train'), 'rb') as file:
-        data = pickle.load(file, encoding='latin1')
-    images = data['data'].reshape(-1, 3, 32, 32)
-    labels = np.array(data['fine_labels'])
-    assert images.shape == (50000, 3, 32, 32) and images.dtype == np.uint8
-    assert labels.shape == (50000,) and labels.dtype == np.int32
-    assert np.min(images) == 0 and np.max(images) == 255
-    assert np.min(labels) == 0 and np.max(labels) == 99
-    onehot = np.zeros((labels.size, np.max(labels) + 1), dtype=np.float32)
-    onehot[np.arange(labels.size), labels] = 1.0
-
-    with TFRecordExporter(tfrecord_dir, images.shape[0]) as tfr:
-        order = tfr.choose_shuffled_order()
-        for idx in range(order.size):
-            tfr.add_image(images[order[idx]])
-        tfr.add_labels(onehot[order])
-
-
-# ----------------------------------------------------------------------------
-
-def create_svhn(tfrecord_dir, svhn_dir):
-    print('Loading SVHN from "%s"' % svhn_dir)
-    import pickle
-    images = []
-    labels = []
-    for batch in range(1, 4):
-        with open(os.path.join(svhn_dir, 'train_%d.pkl' % batch), 'rb') as file:
-            data = pickle.load(file, encoding='latin1')
-        images.append(data[0])
-        labels.append(data[1])
-    images = np.concatenate(images)
-    labels = np.concatenate(labels)
-    assert images.shape == (73257, 3, 32, 32) and images.dtype == np.uint8
-    assert labels.shape == (73257,) and labels.dtype == np.uint8
-    assert np.min(images) == 0 and np.max(images) == 255
-    assert np.min(labels) == 0 and np.max(labels) == 9
-    onehot = np.zeros((labels.size, np.max(labels) + 1), dtype=np.float32)
-    onehot[np.arange(labels.size), labels] = 1.0
-
-    with TFRecordExporter(tfrecord_dir, images.shape[0]) as tfr:
-        order = tfr.choose_shuffled_order()
-        for idx in range(order.size):
-            tfr.add_image(images[order[idx]])
-        tfr.add_labels(onehot[order])
-
-
-# ----------------------------------------------------------------------------
-
-def create_lsun(tfrecord_dir, lmdb_dir, resolution=256, max_images=None):
-    print('Loading LSUN dataset from "%s"' % lmdb_dir)
-    import lmdb  # pip install lmdb
-    import cv2  # pip install opencv-python
-    import io
-    with lmdb.open(lmdb_dir, readonly=True).begin(write=False) as txn:
-        total_images = txn.stat()['entries']
-        if max_images is None:
-            max_images = total_images
-        with TFRecordExporter(tfrecord_dir, max_images) as tfr:
-            for idx, (key, value) in enumerate(txn.cursor()):
-                try:
-                    try:
-                        img = cv2.imdecode(np.fromstring(value, dtype=np.uint8), 1)
-                        if img is None:
-                            raise IOError('cv2.imdecode failed')
-                        img = img[:, :, ::-1]  # BGR => RGB
-                    except IOError:
-                        img = np.asarray(PIL.Image.open(io.BytesIO(value)))
-                    crop = np.min(img.shape[:2])
-                    img = img[(img.shape[0] - crop) // 2: (img.shape[0] + crop) // 2,
-                          (img.shape[1] - crop) // 2: (img.shape[1] + crop) // 2]
-                    img = PIL.Image.fromarray(img, 'RGB')
-                    img = img.resize((resolution, resolution), PIL.Image.ANTIALIAS)
-                    img = np.asarray(img)
-                    img = img.transpose(2, 0, 1)  # HWC => CHW
-                    tfr.add_image(img)
-                except:
-                    print(sys.exc_info()[1])
-                if tfr.cur_images == max_images:
-                    break
-
-
-# ----------------------------------------------------------------------------
-
-def create_celeba(tfrecord_dir, celeba_dir, cx=89, cy=121):
-    print('Loading CelebA from "%s"' % celeba_dir)
-    glob_pattern = os.path.join(celeba_dir, 'img_align_celeba_png', '*.png')
-    image_filenames = sorted(glob.glob(glob_pattern))
-    expected_images = 202599
-    if len(image_filenames) != expected_images:
-        error('Expected to find %d images' % expected_images)
-
-    with TFRecordExporter(tfrecord_dir, len(image_filenames)) as tfr:
-        order = tfr.choose_shuffled_order()
-        for idx in range(order.size):
-            img = np.asarray(PIL.Image.open(image_filenames[order[idx]]))
-            assert img.shape == (218, 178, 3)
-            img = img[cy - 64: cy + 64, cx - 64: cx + 64]
-            img = img.transpose(2, 0, 1)  # HWC => CHW
-            tfr.add_image(img)
-
-
-# ----------------------------------------------------------------------------
-
-def create_celebahq(tfrecord_dir, celeba_dir, delta_dir, num_threads=4, num_tasks=100):
-    print('Loading CelebA from "%s"' % celeba_dir)
-    expected_images = 202599
-    if len(glob.glob(os.path.join(celeba_dir, 'img_celeba', '*.jpg'))) != expected_images:
-        error('Expected to find %d images' % expected_images)
-    with open(os.path.join(celeba_dir, 'Anno', 'list_landmarks_celeba.txt'), 'rt') as file:
-        landmarks = [[float(value) for value in line.split()[1:]] for line in file.readlines()[2:]]
-        landmarks = np.float32(landmarks).reshape(-1, 5, 2)
-
-    print('Loading CelebA-HQ deltas from "%s"' % delta_dir)
-    import scipy.ndimage
-    import hashlib
-    import bz2
-    import zipfile
-    import base64
-    import cryptography.hazmat.primitives.hashes
-    import cryptography.hazmat.backends
-    import cryptography.hazmat.primitives.kdf.pbkdf2
-    import cryptography.fernet
-    expected_zips = 30
-    if len(glob.glob(os.path.join(delta_dir, 'delta*.zip'))) != expected_zips:
-        error('Expected to find %d zips' % expected_zips)
-    with open(os.path.join(delta_dir, 'image_list.txt'), 'rt') as file:
-        lines = [line.split() for line in file]
-        fields = dict()
-        for idx, field in enumerate(lines[0]):
-            type = int if field.endswith('idx') else str
-            fields[field] = [type(line[idx]) for line in lines[1:]]
-    indices = np.array(fields['idx'])
-
-    # Must use pillow version 3.1.1 for everything to work correctly.
-    if getattr(PIL, 'PILLOW_VERSION', '') != '3.1.1':
-        error('create_celebahq requires pillow version 3.1.1')  # conda install pillow=3.1.1
-
-    # Must use libjpeg version 8d for everything to work correctly.
-    img = np.array(PIL.Image.open(os.path.join(celeba_dir, 'img_celeba', '000001.jpg')))
-    md5 = hashlib.md5()
-    md5.update(img.tobytes())
-    if md5.hexdigest() != '9cad8178d6cb0196b36f7b34bc5eb6d3':
-        error('create_celebahq requires libjpeg version 8d')  # conda install jpeg=8d
-
-    def rot90(v):
-        return np.array([-v[1], v[0]])
-
-    def process_func(idx):
-        # Load original image.
-        orig_idx = fields['orig_idx'][idx]
-        orig_file = fields['orig_file'][idx]
-        orig_path = os.path.join(celeba_dir, 'img_celeba', orig_file)
-        img = PIL.Image.open(orig_path)
-
-        # Choose oriented crop rectangle.
-        lm = landmarks[orig_idx]
-        eye_avg = (lm[0] + lm[1]) * 0.5 + 0.5
-        mouth_avg = (lm[3] + lm[4]) * 0.5 + 0.5
-        eye_to_eye = lm[1] - lm[0]
-        eye_to_mouth = mouth_avg - eye_avg
-        x = eye_to_eye - rot90(eye_to_mouth)
-        x /= np.hypot(*x)
-        x *= max(np.hypot(*eye_to_eye) * 2.0, np.hypot(*eye_to_mouth) * 1.8)
-        y = rot90(x)
-        c = eye_avg + eye_to_mouth * 0.1
-        quad = np.stack([c - x - y, c - x + y, c + x + y, c + x - y])
-        zoom = 1024 / (np.hypot(*x) * 2)
-
-        # Shrink.
-        shrink = int(np.floor(0.5 / zoom))
-        if shrink > 1:
-            size = (int(np.round(float(img.size[0]) / shrink)), int(np.round(float(img.size[1]) / shrink)))
-            img = img.resize(size, PIL.Image.ANTIALIAS)
-            quad /= shrink
-            zoom *= shrink
-
-        # Crop.
-        border = max(int(np.round(1024 * 0.1 / zoom)), 3)
-        crop = (int(np.floor(min(quad[:, 0]))), int(np.floor(min(quad[:, 1]))), int(np.ceil(max(quad[:, 0]))),
-                int(np.ceil(max(quad[:, 1]))))
-        crop = (max(crop[0] - border, 0), max(crop[1] - border, 0), min(crop[2] + border, img.size[0]),
-                min(crop[3] + border, img.size[1]))
-        if crop[2] - crop[0] < img.size[0] or crop[3] - crop[1] < img.size[1]:
-            img = img.crop(crop)
-            quad -= crop[0:2]
-
-        # Simulate super-resolution.
-        superres = int(np.exp2(np.ceil(np.log2(zoom))))
-        if superres > 1:
-            img = img.resize((img.size[0] * superres, img.size[1] * superres), PIL.Image.ANTIALIAS)
-            quad *= superres
-            zoom /= superres
-
-        # Pad.
-        pad = (int(np.floor(min(quad[:, 0]))), int(np.floor(min(quad[:, 1]))), int(np.ceil(max(quad[:, 0]))),
-               int(np.ceil(max(quad[:, 1]))))
-        pad = (max(-pad[0] + border, 0), max(-pad[1] + border, 0), max(pad[2] - img.size[0] + border, 0),
-               max(pad[3] - img.size[1] + border, 0))
-        if max(pad) > border - 4:
-            pad = np.maximum(pad, int(np.round(1024 * 0.3 / zoom)))
-            img = np.pad(np.float32(img), ((pad[1], pad[3]), (pad[0], pad[2]), (0, 0)), 'reflect')
-            h, w, _ = img.shape
-            y, x, _ = np.mgrid[:h, :w, :1]
-            mask = 1.0 - np.minimum(np.minimum(np.float32(x) / pad[0], np.float32(y) / pad[1]),
-                                    np.minimum(np.float32(w - 1 - x) / pad[2], np.float32(h - 1 - y) / pad[3]))
-            blur = 1024 * 0.02 / zoom
-            img += (scipy.ndimage.gaussian_filter(img, [blur, blur, 0]) - img) * np.clip(mask * 3.0 + 1.0, 0.0, 1.0)
-            img += (np.median(img, axis=(0, 1)) - img) * np.clip(mask, 0.0, 1.0)
-            img = PIL.Image.fromarray(np.uint8(np.clip(np.round(img), 0, 255)), 'RGB')
-            quad += pad[0:2]
-
-        # Transform.
-        img = img.transform((4096, 4096), PIL.Image.QUAD, (quad + 0.5).flatten(), PIL.Image.BILINEAR)
-        img = img.resize((1024, 1024), PIL.Image.ANTIALIAS)
-        img = np.asarray(img).transpose(2, 0, 1)
-
-        # Verify MD5.
-        md5 = hashlib.md5()
-        md5.update(img.tobytes())
-        assert md5.hexdigest() == fields['proc_md5'][idx]
-
-        # Load delta image and original JPG.
-        with zipfile.ZipFile(os.path.join(delta_dir, 'deltas%05d.zip' % (idx - idx % 1000)), 'r') as zip:
-            delta_bytes = zip.read('delta%05d.dat' % idx)
-        with open(orig_path, 'rb') as file:
-            orig_bytes = file.read()
-
-        # Decrypt delta image, using original JPG data as decryption key.
-        algorithm = cryptography.hazmat.primitives.hashes.SHA256()
-        backend = cryptography.hazmat.backends.default_backend()
-        salt = bytes(orig_file, 'ascii')
-        kdf = cryptography.hazmat.primitives.kdf.pbkdf2.PBKDF2HMAC(algorithm=algorithm, length=32, salt=salt,
-                                                                   iterations=100000, backend=backend)
-        key = base64.urlsafe_b64encode(kdf.derive(orig_bytes))
-        delta = np.frombuffer(bz2.decompress(cryptography.fernet.Fernet(key).decrypt(delta_bytes)),
-                              dtype=np.uint8).reshape(3, 1024, 1024)
-
-        # Apply delta image.
-        img = img + delta
-
-        # Verify MD5.
-        md5 = hashlib.md5()
-        md5.update(img.tobytes())
-        assert md5.hexdigest() == fields['final_md5'][idx]
-        return img
-
-    with TFRecordExporter(tfrecord_dir, indices.size) as tfr:
-        order = tfr.choose_shuffled_order()
-        with ThreadPool(num_threads) as pool:
-            for img in pool.process_items_concurrently(indices[order].tolist(), process_func=process_func,
-                                                       max_items_in_flight=num_tasks):
-                tfr.add_image(img)
-
-
-# ----------------------------------------------------------------------------
-
-def create_from_images(labeled_tfrecord_dir, unlabeled_tfrecord_dir, labeled_dir, unlabeled_dir, shuffle, Num_classes):
-    print('Loading images from "%s"' % labeled_dir)
-    labeled_filenames = sorted(glob.glob(os.path.join(labeled_dir, '*')))
+    # Unlabeled dataset loading
     print('Loading images from "%s"' % unlabeled_dir)
     unlabeled_filenames = sorted(glob.glob(os.path.join(unlabeled_dir, '*')))
+
+    # Checks
     if len(labeled_filenames) == 0:
         error('No input images found in ' + labeled_dir)
     if len(unlabeled_filenames) == 0:
         error('No input images found in ' + unlabeled_dir)
 
-    img = np.asarray(PIL.Image.open(labeled_filenames[0]))
+    # Checking to make sure dimensions are all good
+    img = np.asarray(PIL.Image.open(labeled_filenames[0][0]))
     resolution = img.shape[0]
     channels = img.shape[2] if img.ndim == 3 else 1
     if img.shape[1] != resolution:
@@ -646,26 +338,26 @@ def create_from_images(labeled_tfrecord_dir, unlabeled_tfrecord_dir, labeled_dir
     if channels not in [1, 3]:
         error('Input images must be stored as RGB or grayscale')
 
-    labels = [1] * 15 + [0] * 15
-    labels = np.array(labels)
-    onehot = np.zeros((labels.size, Num_classes + 1), dtype=np.float32)
-    onehot[np.arange(labels.size), labels] = 1.0
 
+    # NEED TO DEBUG!!!!!!!!!
     #  Adding labeled data
-    with TFRecordExporter(labeled_tfrecord_dir, len(labeled_filenames)) as tfr:
-        order = tfr.choose_shuffled_order() if shuffle else np.arange(len(labeled_filenames))
-        for idx in range(order.size):
-            img = np.asarray(PIL.Image.open(labeled_filenames[order[idx]]))
-            if channels == 1:
-                img = img[np.newaxis, :, :]  # HW => CHW
-            else:
-                img = img.transpose(2, 0, 1)  # HWC => CHW
-            tfr.add_image(img)
+    with TFRecordExporter(labeled_tfrecord_dir, len(labels)) as tfr:
+        order = tfr.choose_shuffled_order() if shuffle else np.arange(len(labels))
+        #  Iterate through each class
+        for i in range(Num_classes):
+            # Go over each image in the class
+            for idx in range(len(labeled_filenames[i])):
+                img = np.asarray(PIL.Image.open(labeled_filenames[i][order[idx]]))
+                if channels == 1:
+                    img = img[np.newaxis, :, :]  # HW => CHW
+                else:
+                    img = img.transpose(2, 0, 1)  # HWC => CHW
+                tfr.add_image(img)
         tfr.add_labels(onehot[order])
 
     #  Adding unlabeled data
     with TFRecordExporter(unlabeled_tfrecord_dir, len(unlabeled_filenames)) as tfr2:
-        fake_labels = [2] * 500
+        fake_labels = [Num_classes] * len(unlabeled_filenames)
         fake_labels = np.array(fake_labels)
         fake_onehot = np.zeros((fake_labels.size, np.max(fake_labels) + 1), dtype=np.float32)
         fake_onehot[np.arange(fake_labels.size), fake_labels] = 1.0
@@ -683,125 +375,19 @@ def create_from_images(labeled_tfrecord_dir, unlabeled_tfrecord_dir, labeled_dir
 
 # ----------------------------------------------------------------------------
 
-def create_from_hdf5(tfrecord_dir, hdf5_filename, shuffle):
-    print('Loading HDF5 archive from "%s"' % hdf5_filename)
-    import h5py  # conda install h5py
-    with h5py.File(hdf5_filename, 'r') as hdf5_file:
-        hdf5_data = max([value for key, value in hdf5_file.items() if key.startswith('data')],
-                        key=lambda lod: lod.shape[3])
-        with TFRecordExporter(tfrecord_dir, hdf5_data.shape[0]) as tfr:
-            order = tfr.choose_shuffled_order() if shuffle else np.arange(hdf5_data.shape[0])
-            for idx in range(order.size):
-                tfr.add_image(hdf5_data[order[idx]])
-            npy_filename = os.path.splitext(hdf5_filename)[0] + '-labels.npy'
-            if os.path.isfile(npy_filename):
-                tfr.add_labels(np.load(npy_filename)[order])
-
-
-# ----------------------------------------------------------------------------
-
-def execute_cmdline(argv):
-    prog = argv[0]
-    parser = argparse.ArgumentParser(
-        prog=prog,
-        description='Tool for creating, extracting, and visualizing Progressive GAN datasets.',
-        epilog='Type "%s <command> -h" for more information.' % prog)
-
-    subparsers = parser.add_subparsers(dest='command')
-    subparsers.required = True
-
-    def add_command(cmd, desc, example=None):
-        epilog = 'Example: %s %s' % (prog, example) if example is not None else None
-        return subparsers.add_parser(cmd, description=desc, help=desc, epilog=epilog)
-
-    p = add_command('display', 'Display images in dataset.',
-                    'display datasets/mnist')
-    p.add_argument('tfrecord_dir', help='Directory containing dataset')
-
-    p = add_command('extract', 'Extract images from dataset.',
-                    'extract datasets/mnist mnist-images')
-    p.add_argument('tfrecord_dir', help='Directory containing dataset')
-    p.add_argument('output_dir', help='Directory to extract the images into')
-
-    p = add_command('compare', 'Compare two datasets.',
-                    'compare datasets/mydataset datasets/mnist')
-    p.add_argument('tfrecord_dir_a', help='Directory containing first dataset')
-    p.add_argument('tfrecord_dir_b', help='Directory containing second dataset')
-    p.add_argument('--ignore_labels', help='Ignore labels (default: 0)', type=int, default=0)
-
-    p = add_command('create_mnist', 'Create dataset for MNIST.',
-                    'create_mnist datasets/mnist ~/downloads/mnist')
-    p.add_argument('tfrecord_dir', help='New dataset directory to be created')
-    p.add_argument('mnist_dir', help='Directory containing MNIST')
-
-    p = add_command('create_mnistrgb', 'Create dataset for MNIST-RGB.',
-                    'create_mnistrgb datasets/mnistrgb ~/downloads/mnist')
-    p.add_argument('tfrecord_dir', help='New dataset directory to be created')
-    p.add_argument('mnist_dir', help='Directory containing MNIST')
-    p.add_argument('--num_images', help='Number of composite images to create (default: 1000000)', type=int,
-                   default=1000000)
-    p.add_argument('--random_seed', help='Random seed (default: 123)', type=int, default=123)
-
-    p = add_command('create_cifar10', 'Create dataset for CIFAR-10.',
-                    'create_cifar10 datasets/cifar10 ~/downloads/cifar10')
-    p.add_argument('tfrecord_dir', help='New dataset directory to be created')
-    p.add_argument('cifar10_dir', help='Directory containing CIFAR-10')
-
-    p = add_command('create_cifar100', 'Create dataset for CIFAR-100.',
-                    'create_cifar100 datasets/cifar100 ~/downloads/cifar100')
-    p.add_argument('tfrecord_dir', help='New dataset directory to be created')
-    p.add_argument('cifar100_dir', help='Directory containing CIFAR-100')
-
-    p = add_command('create_svhn', 'Create dataset for SVHN.',
-                    'create_svhn datasets/svhn ~/downloads/svhn')
-    p.add_argument('tfrecord_dir', help='New dataset directory to be created')
-    p.add_argument('svhn_dir', help='Directory containing SVHN')
-
-    p = add_command('create_lsun', 'Create dataset for single LSUN category.',
-                    'create_lsun datasets/lsun-car-100k ~/downloads/lsun/car_lmdb --resolution 256 --max_images 100000')
-    p.add_argument('tfrecord_dir', help='New dataset directory to be created')
-    p.add_argument('lmdb_dir', help='Directory containing LMDB database')
-    p.add_argument('--resolution', help='Output resolution (default: 256)', type=int, default=256)
-    p.add_argument('--max_images', help='Maximum number of images (default: none)', type=int, default=None)
-
-    p = add_command('create_celeba', 'Create dataset for CelebA.',
-                    'create_celeba datasets/celeba ~/downloads/celeba')
-    p.add_argument('tfrecord_dir', help='New dataset directory to be created')
-    p.add_argument('celeba_dir', help='Directory containing CelebA')
-    p.add_argument('--cx', help='Center X coordinate (default: 89)', type=int, default=89)
-    p.add_argument('--cy', help='Center Y coordinate (default: 121)', type=int, default=121)
-
-    p = add_command('create_celebahq', 'Create dataset for CelebA-HQ.',
-                    'create_celebahq datasets/celebahq ~/downloads/celeba ~/downloads/celeba-hq-deltas')
-    p.add_argument('tfrecord_dir', help='New dataset directory to be created')
-    p.add_argument('celeba_dir', help='Directory containing CelebA')
-    p.add_argument('delta_dir', help='Directory containing CelebA-HQ deltas')
-    p.add_argument('--num_threads', help='Number of concurrent threads (default: 4)', type=int, default=4)
-    p.add_argument('--num_tasks', help='Number of concurrent processing tasks (default: 100)', type=int, default=100)
-
-    p = add_command('create_from_images', 'Create dataset from a directory full of images.',
-                    'create_from_images datasets/mydataset myimagedir')
-    p.add_argument('tfrecord_dir', help='New dataset directory to be created')
-    p.add_argument('image_dir', help='Directory containing the images')
-    p.add_argument('--shuffle', help='Randomize image order (default: 1)', type=int, default=1)
-
-    p = add_command('create_from_hdf5', 'Create dataset from legacy HDF5 archive.',
-                    'create_from_hdf5 datasets/celebahq ~/downloads/celeba-hq-1024x1024.h5')
-    p.add_argument('tfrecord_dir', help='New dataset directory to be created')
-    p.add_argument('hdf5_filename', help='HDF5 archive containing the images')
-    p.add_argument('--shuffle', help='Randomize image order (default: 1)', type=int, default=1)
-
-    args = parser.parse_args(argv[1:] if len(argv) > 1 else ['-h'])
-    func = globals()[args.command]
-    del args.command
-    func(**vars(args))
-
-
-# ----------------------------------------------------------------------------
-
 if __name__ == "__main__":
-    # execute_cmdline(sys.argv)
-    create_from_images("Labeled_data", "Unlabeled_data", "CatVDog/PetImages/Labeled/", "CatVDog/PetImages/Unlabeled", False, 2)
+    if len(sys.argv) != 3:
+        error("Wrong amount of commands given!\nEx) python3 dataset_tool.py /home/user/Desktop/SSL-PGGAN/CatVDog/PetImages/Labeled/ /home/user/Desktop/SSL-PGGAN/CatVDog/PetImages/Unlabeled/\n")
+
+    if not os.path.isdir("Labeled"):
+        os.mkdir("Labeled")
+    if not os.path.isdir("Unlabeled"):
+        os.mkdir("Unlabeled")
+
+    args = sys.argv[1:]
+
+    create_from_images("Labeled", "Unlabeled", args[0] + "/", args[1] + "/", False)
 
 # ----------------------------------------------------------------------------
+
 

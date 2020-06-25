@@ -9,6 +9,9 @@ import os
 import time
 import numpy as np
 import tensorflow as tf
+import warnings
+warnings.filterwarnings('ignore',category=FutureWarning)
+warnings.filterwarnings('ignore', category=DeprecationWarning)
 
 import config
 import tfutil
