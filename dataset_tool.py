@@ -389,7 +389,7 @@ def create_from_images(labeled_tfrecord_dir, unlabeled_tfrecord_dir, labeled_dir
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        error("Wrong amount of commands given!\nFormat: python3 dataset_tool.py <Labeled dir> <Unlabeled dir>\nEx) python3 dataset_tool.py /home/user/Desktop/SSL-PGGAN/CatVDog/PetImages/Labeled/ /home/user/Desktop/SSL-PGGAN/CatVDog/PetImages/Unlabeled/\n")
+        error("Wrong amount of commands given!\nFormat: python3 dataset_tool.py <Labeled dir> <Unlabeled dir>\nEx) python3 dataset_tool.py /home/user/Desktop/SSL-PG-GAN/CatVDog/PetImages/Labeled/ /home/user/Desktop/SSL-PG-GAN/CatVDog/PetImages/Unlabeled/\n")
 
     if not os.path.isdir("Labeled"):
         os.mkdir("Labeled")
