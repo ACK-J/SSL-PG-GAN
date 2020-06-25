@@ -296,6 +296,18 @@ def compare(tfrecord_dir_a, tfrecord_dir_b, ignore_labels):
 
 
 def create_from_images(labeled_tfrecord_dir, unlabeled_tfrecord_dir, labeled_dir, unlabeled_dir, shuffle):
+    # Checking to see if there is two slashes at the end instead of 1
+    if labeled_dir[-1] == "/" and labeled_dir[-2] == "/":
+        labeled_dir = labeled_dir[:-1]
+    if unlabeled_dir[-1] == "/" and unlabeled_dir[-2] == "/":
+        unlabeled_dir = unlabeled_dir[:-1]
+     
+    # Checking to make sure the path exists    
+    if not os.path.isdir(labeled_dir):
+        error("Path " + labeled_dir + " does not exist!")
+    if not os.path.isdir(unlabeled_dir):
+        error("Path " + unlabeled_dir + " does not exist!")
+    
     # This lists all of the directories in the provided labeled directory. Each class should have its own folder
     # within this directory. It also prepends the full path before it and makes sure .git isn't included
     classes_dir = [labeled_dir + name for name in os.listdir(labeled_dir) if os.path.isdir(os.path.join(labeled_dir, name)) and name != '.git']
