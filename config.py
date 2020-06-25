@@ -57,7 +57,6 @@ grid        = EasyDict(size='1080p', layout='random')       # Options for train.
 #desc += '-cifar100';            dataset = EasyDict(tfrecord_dir='cifar100')
 #desc += '-svhn';                dataset = EasyDict(tfrecord_dir='svhn')
 desc += '-catsvdogs';            dataset = EasyDict(tfrecord_dir='Labeled_data'); unlabeled_dataset = EasyDict(tfrecord_dir='Unlabeled_data')
-testingdataset = EasyDict(tfrecord_dir='testing')
 #desc += '-mnistrgb';            dataset = EasyDict(tfrecord_dir='mnistrgb')
 #desc += '-syn1024rgb';          dataset = EasyDict(class_name='dataset.SyntheticDataset', resolution=1024, num_channels=3)
 #desc += '-lsun-airplane';       dataset = EasyDict(tfrecord_dir='lsun-airplane-100k');       train.mirror_augment = True
