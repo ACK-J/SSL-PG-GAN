@@ -86,6 +86,10 @@ _Make sure the amount of GPU's selected matches the uncommented line in the conf
 the training using `screen` or `tmux` so that if you lose connection via SSH you won't
 have to restart the training.  
 
+# Testing
+ `python3 test_discriminator.py <path to out-of-sample image directory> <id of training round>`
+- You can find the training round by going to `results/` directory. The number at the beginning 
+of each directory identifies each training session.
 
 ## Comments and Tips
 - It is not advised to run this code in a VM or a docker container due to the fact that 
