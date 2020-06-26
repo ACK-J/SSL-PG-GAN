@@ -2,7 +2,7 @@
 ### A Semi-Supervised Progressively Growing Generative Adversarial Network
 
 This project builds mainly off of the code presented in [Progressive Growing of GAN's for Improved Quality, Stability and Variation](https://arxiv.org/pdf/1710.10196.pdf)
- by Kerras et al. ICLR 2018. The idea was to incorporate semi supervised learning along side progressively growing
+ by Kerras et al. ICLR 2018. My research tries to incorporate semi supervised learning along side progressively growing
  training to get the best of both. Not needing to worry about an over abundance of labeled data and the ability to 
  generate high definition images.  
 
