@@ -8,6 +8,7 @@ import numpy as np
 import tensorflow as tf
 import glob
 import dataset
+import sys
 import config
 import tfutil
 import misc
@@ -29,25 +30,32 @@ def test_discriminator(run_id, tensor, snapshot=None):
 
 
 if __name__ == '__main__':
+    args = sys.argv
+    if len(args) != 3:
+        print("Error Wrong Arguments: python3 test_discriminator.py <path to out of sample images> <id of training "
+              "round>\npython3 test_discriminator.py /home/user/OutOfSample/Images/ 2")
+        exit(1)
+    if not os.path.isdir(args[1]):
+        print("Error: " + args[1] + " does not exist")
+        exit(1)
+    if args[1][-1] != '/':
+        args[1] = args[1] + "/"
+    
     np.random.seed(config.random_seed)
     print('Initializing TensorFlow...')
     os.environ.update(config.env)
     tfutil.init_tf(config.tf_config)
     #tensor = np.zeros((1, 3, 512, 512))
-    
-    for filename in os.listdir('/home/jxh3105/SSL-PG-GAN/CatVDog/PetImages/Dog10P/'):
+
+    for filename in os.listdir(args[1]):
         print(filename)
-        img = np.asarray(PIL.Image.open('/home/jxh3105/SSL-PG-GAN/CatVDog/PetImages/Dog10P/DOG-99_2_3.jpg')).reshape(3,512,512)
+        img = np.asarray(PIL.Image.open(args[1] + filename)).reshape(3,512,512)
         img = np.expand_dims(img, axis=0)
-        print(img.shape)
-        scores, labels = test_discriminator(8, img)
-        results = labels.eval()
-        print(results)
-        if results[0][0] >= results[0][1]:
-            print("DOG")
-        else:
-            print("CAT")
+        print(img)
+        scores, labels = test_discriminator(args[2], img)
+
         print("Labels",labels.eval())
         print("Scores",scores.eval())
+
 
 
