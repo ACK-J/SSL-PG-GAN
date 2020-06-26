@@ -1,5 +1,11 @@
 # SSL-PG-GAN
-A semi-supervised progressively growing generative adversarial network 
+### A Semi-Supervised Progressively Growing Generative Adversarial Network
+
+This project builds mainly off of the code presented in [Progressive Growing of GAN's for Improved Quality, Stability and Variation](https://arxiv.org/pdf/1710.10196.pdf)
+ by Kerras et al. ICLR 2018. The idea was to incorporate semi supervised learning along side progressively growing
+ training to get the best of both. Not needing to worry about an over abundance of labeled data and the ability to 
+ generate high definition images.  
+
 
 
 # Installation 
@@ -10,7 +16,7 @@ https://www.anaconda.com/products/individual#linux
 
 Once downloaded `chmod +x <The file you just downloaded>`
 
-Then execute the file with either `./Anaconda3-2020.02-Linux-x86_64.sh` or `bash </path/to/file.sh`
+Then execute the file with either `./Anaconda3-2020.02-Linux-x86_64.sh` or `bash </path/to/file.sh>`
 
 Complete the installation with all default settings 
 
@@ -48,5 +54,41 @@ below so you can follow along and get something running
 
 https://drive.google.com/file/d/13OHIv7A_AFbKWe_URwbyOvEKRnPovrAq/view?usp=sharing
 
-- Once downloaded place into the root of the 
+- Once downloaded place into the root of the SSL-PG-GAN folder
+
+To create the cat/dogs dataset run the following command
+`python3 dataset_tool.py <Labeled dir> <Unlabeled dir> 2> /dev/null`
+- Make sure to use full paths for both Labeled and Unlabeled datasets.
+- The reason that I send stderr to /dev/null is because the version of tensorflow has very 
+noisy deprecation warnings which are annoying. 
+- Now if you look in the `Labeled` and `Unlabeled` directories you should see a bunch of .tfrecord files
+
+# Configuration
+Edit `config.py` to see all of the options available. 
+You must change two lines in the configuration file before training the model. 
+They are both commented with `# CHANGE ME` and are the paths to the parent directory of the 
+labeled and unlabeled data folders. This should normally just be the path to the 
+SSL-PG-GAN folder.
+
+Other configuration changes include changing the amount of Nvidia GPU's used.
+- Note if you want to select multiple GPU's make sure the environment variable
+CUDA_VISIBLE_DEVICES is set. You can do this by typing `echo $CUDA_VISIBLE_DEVICES`
+
+You can view the GPU's available to you by typing `nvidia-smi` or `nvidia-smi -l`
+
+You can change the GPU's selected by typing `export CUDA_VISIBLE_DEVICES=0,1,2,3`
+
+_Make sure the amount of GPU's selected matches the uncommented line in the config.py file_
+
+# Training
+`python3 train.py`
+- This will most likely take a while even with 4 GPU's running. I recommend running 
+the training using `screen` or `tmux` so that if you lose connection via SSH you won't
+have to restart the training.  
+
+
+## Comments and Tips
+- It is not advised to run this code in a VM or a docker container due to the fact that 
+it is tricky to pass graphics cards into them and have them function properly. This
+is not to say that it isn't possible just that it may be time consuming. 
 
