@@ -322,7 +322,7 @@ def create_from_images(labeled_tfrecord_dir, unlabeled_tfrecord_dir, labeled_dir
     labels = []
     for i in range(Num_classes):
         labels += [i] * len(labeled_filenames[i])
-    print("Number of classes: " + str(len(classes_dir)+1) + "\n")
+    print("Number of classes: " + str(len(classes_dir)+1))
     # Converting labels into np array and one hot encoding it
     labels = np.array(labels)
     onehot = np.zeros((labels.size, Num_classes + 1), dtype=np.float32)
@@ -332,6 +332,7 @@ def create_from_images(labeled_tfrecord_dir, unlabeled_tfrecord_dir, labeled_dir
     # Unlabeled dataset loading
     print('Loading images from "%s"' % unlabeled_dir)
     unlabeled_filenames = sorted(glob.glob(os.path.join(unlabeled_dir, '*')))
+    print()
 
     # Checks
     if len(labeled_filenames) == 0:
@@ -366,6 +367,8 @@ def create_from_images(labeled_tfrecord_dir, unlabeled_tfrecord_dir, labeled_dir
                     img = img.transpose(2, 0, 1)  # HWC => CHW
                 tfr.add_image(img)
         tfr.add_labels(onehot[order])
+
+    print()
 
     #  Adding unlabeled data
     with TFRecordExporter(unlabeled_tfrecord_dir, len(unlabeled_filenames)) as tfr2:
