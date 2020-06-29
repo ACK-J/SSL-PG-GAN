@@ -2,9 +2,9 @@
 ### A Semi-Supervised Progressively Growing Generative Adversarial Network
 
 This project builds mainly off of the code presented in [Progressive Growing of GAN's for Improved Quality, Stability and Variation](https://arxiv.org/pdf/1710.10196.pdf)
- by Kerras et al. ICLR 2018. My research tries to incorporate semi supervised learning along side progressively growing
- training to get the best of both. Not needing to worry about an over abundance of labeled data and the ability to 
- generate high definition images.  
+ by Kerras et al. ICLR 2018. Inspiration also came from OpenAI's [Improved Techniques for Training GANs](https://arxiv.org/pdf/1606.03498.pdf) which details semi-supervised implementations of GANs.
+ 
+ My research tries to incorporate semi-supervised learning alongside progressively growing training to get the best of both. Not needing to worry about an overabundance of labeled data and the ability to generate high definition images.  
 
 
 
@@ -32,11 +32,10 @@ Once complete open a new terminal so the changes take effect.
 
 `git clone https://github.com/ACK-J/SSL-PG-GAN.git`
 
-Open up the file `environment.yml` in any text editor you want. Go all the way to the bottom of the file and you should 
-see the line `prefix: /home/USERNAME/anaconda3/envs/ssl-pggan` Please change where it
-says `USERNAME` to be your current username. Once thats done save and quit.
+Open up the file `environment.yml` in any text editor you want. Go all the way to the bottom of the file and you should see the line `prefix: /home/USERNAME/anaconda3/envs/ssl-pggan` Please change where it
+says `USERNAME` to be your current username. Once that's done save and quit.
 
-Next run the following command to create the environment
+Next, run the following command to create the environment
 
 `conda env create -f environment.yml`
 - This could take a little while for everything to install depending on your internet connection
@@ -59,15 +58,13 @@ https://drive.google.com/file/d/13OHIv7A_AFbKWe_URwbyOvEKRnPovrAq/view?usp=shari
 To create the cat/dogs dataset run the following command
 `python3 dataset_tool.py <Labeled dir> <Unlabeled dir> 2> /dev/null`
 - Make sure to use full paths for both Labeled and Unlabeled datasets.
-- The reason that I send stderr to /dev/null is because the version of tensorflow has very 
-noisy deprecation warnings which are annoying. 
+- The reason that I send stderr to /dev/null is because the version of tensorflow has very noisy deprecation warnings which are annoying. 
 - Now if you look in the `Labeled` and `Unlabeled` directories you should see a bunch of .tfrecord files
 
 # Configuration
 Edit `config.py` to see all of the options available. 
 You must change two lines in the configuration file before training the model. 
-They are both commented with `# CHANGE ME` and are the paths to the parent directory of the 
-labeled and unlabeled data folders. This should normally just be the path to the 
+They are both commented with `# CHANGE ME` and are the paths to the parent directory of the labeled and unlabeled data folders. This should normally just be the path to the 
 SSL-PG-GAN folder.
 
 Other configuration changes include changing the amount of Nvidia GPU's used.
@@ -88,11 +85,9 @@ have to restart the training.
 
 # Testing
  `python3 test_discriminator.py <path to out-of-sample image directory> <id of training round>`
-- You can find the training round by going to `results/` directory. The number at the beginning 
-of each directory identifies each training session.
+- You can find the training round by going to `results/` directory. The number at the beginning of each directory identifies each training session.
 
 ## Comments and Tips
-- It is not advised to run this code in a VM or a docker container due to the fact that 
-it is tricky to pass graphics cards into them and have them function properly. This
-is not to say that it isn't possible just that it may be time consuming. 
+- It is not advised to run this code in a VM or a docker container due to the fact that it is tricky to pass graphics cards into them and have them function properly. This
+is not to say that it isn't possible just that it may be time-consuming. 
 
