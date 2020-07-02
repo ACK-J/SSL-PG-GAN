@@ -84,7 +84,7 @@ the training using `screen` or `tmux` so that if you lose connection via SSH you
 have to restart the training.  
 
 # Testing
- `python3 test_discriminator.py <path to out-of-sample image directory> <id of training round>`
+ `python3 test_discriminator.py <FULL path to out-of-sample image directory> <id of training round>`
 - You can find the training round by going to `results/` directory. The number at the beginning of each directory identifies each training session.
 
 ## Comments and Tips
