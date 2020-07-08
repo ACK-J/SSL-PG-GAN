@@ -61,7 +61,7 @@ https://drive.google.com/file/d/13OHIv7A_AFbKWe_URwbyOvEKRnPovrAq/view?usp=shari
     2. Image resolution must be a power-of-two
     3. Image must be either grayscale or RGB
     
-Example Image Size: 512 X 512 X 3
+Example Image Size: 3 X 512 X 512
 
 To create the cat/dogs dataset run the following command
 `python3 dataset_tool.py <Labeled dir> <Unlabeled dir> 2> /dev/null`
