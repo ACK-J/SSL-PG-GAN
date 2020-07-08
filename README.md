@@ -55,6 +55,14 @@ https://drive.google.com/file/d/13OHIv7A_AFbKWe_URwbyOvEKRnPovrAq/view?usp=shari
 
 - Once downloaded place into the root of the SSL-PG-GAN folder
 
+**Please note that every image must:**
+
+    1. Have the same width and height
+    2. Image resolution must be a power-of-two
+    3. Image must be either grayscale or RGB
+    
+Example Image Size: 512 X 512 X 3
+
 To create the cat/dogs dataset run the following command
 `python3 dataset_tool.py <Labeled dir> <Unlabeled dir> 2> /dev/null`
 - Make sure to use full paths for both Labeled and Unlabeled datasets.
