@@ -282,7 +282,8 @@ def train_progressive_gan(
                 misc.save_pkl((G, D, Gs), os.path.join(result_subdir, 'network-snapshot-%06d.pkl' % (cur_nimg // TrainingSpeedInt)))
 
             # Record start time of the next tick.
-            tD_wgangp_acganick_start_time = time.time()
+            tick_start_time = time.time()
+
 
     # Write final results.
     misc.save_pkl((G, D, Gs), os.path.join(result_subdir, 'network-final.pkl'))
