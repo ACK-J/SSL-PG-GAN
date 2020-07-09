@@ -55,6 +55,14 @@ https://drive.google.com/file/d/13OHIv7A_AFbKWe_URwbyOvEKRnPovrAq/view?usp=shari
 
 - Once downloaded place into the root of the SSL-PG-GAN folder
 
+**Please note that every image must:**
+
+    1. Have the same width and height
+    2. Image resolution must be a power-of-two
+    3. Image must be either grayscale or RGB
+    
+Example Image Size: 3 X 512 X 512
+
 To create the cat/dogs dataset run the following command
 `python3 dataset_tool.py <Labeled dir> <Unlabeled dir> 2> /dev/null`
 - Make sure to use full paths for both Labeled and Unlabeled datasets.
@@ -84,8 +92,8 @@ the training using `screen` or `tmux` so that if you lose connection via SSH you
 have to restart the training.  
 
 # Testing
- `python3 test_discriminator.py <path to out-of-sample image directory> <id of training round>`
-- You can find the training round by going to `results/` directory. The number at the beginning of each directory identifies each training session.
+ `python3 test_discriminator.py <FULL path to out-of-sample image directory> <id of training round>`
+- You can find the training round by going to `results/` directory. The number at the beginning of each directory identifies each training session. Make sure tp use the entire 3 digit number ex) 000 or 001 etc...
 
 ## Comments and Tips
 - It is not advised to run this code in a VM or a docker container due to the fact that it is tricky to pass graphics cards into them and have them function properly. This
