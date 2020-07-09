@@ -250,7 +250,7 @@ def D_paper(
     resolution_log2 = int(np.log2(resolution))
     assert resolution == 2**resolution_log2 and resolution >= 4
     def nf(stage): return min(int(fmap_base / (2.0 ** (stage * fmap_decay))), fmap_max)
-    if structure is None: structure = 'linear'# if is_template_graph else 'recursive' # TODO: uncomment when feature out supported for recursive
+    if structure is None: structure = 'linear' if is_template_graph else 'recursive'
     act = leaky_relu
 
     images_in.set_shape([None, num_channels, resolution, resolution])
@@ -304,15 +304,18 @@ def D_paper(
     if structure == 'recursive':
         def grow(res, lod):
             x = lambda: fromrgb(downscale2d(images_in, 2**lod), res)
-            if lod > 0: x = cset(x, (lod_in < lod), lambda: grow(res + 1, lod - 1))
-            x = block(x(), res); y = lambda: x
-            if res > 2: y = cset(y, (lod_in > lod), lambda: lerp(x, fromrgb(downscale2d(images_in, 2**(lod+1)), res - 1), lod_in - lod))
-            return y()
-        combo_out = grow(2, resolution_log2 - 2)
-        features_out = None  # TODO: support recursive model building for conv features output
+            if lod > 0: 
+                x = cset(x, (lod_in < lod), lambda: grow(res + 1, lod - 1)[0])
+            x, features_out = block(x(), res); 
+            y = lambda: x
+            if res > 2: 
+                y = cset(y, (lod_in > lod), lambda: lerp(x, fromrgb(downscale2d(images_in, 2**(lod+1)), res - 1), lod_in - lod))
+            return y(), features_out
+        combo_out, features_out = grow(2, resolution_log2 - 2)
 
-    scores_out = tf.identity(combo_out[:, :1], name='scores_out')
-    labels_out = tf.identity(combo_out[:, 1:], name='labels_out') #Note, labels_out is just logit for fakes
-    return scores_out, labels_out, features_out
+    features_out = tf.identity(features_out, name='features_out')
+    fake_logit_out = tf.identity(combo_out[:, :1], name='fake_logit_out')
+    K_logits_out = tf.identity(combo_out[:, 1:], name='K_logits_out') #Note, labels_out is just logit for fakes
+    return K_logits_out, fake_logit_out, features_out
 
 #----------------------------------------------------------------------------
