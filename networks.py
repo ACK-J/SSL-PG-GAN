@@ -250,7 +250,7 @@ def D_paper(
     resolution_log2 = int(np.log2(resolution))
     assert resolution == 2**resolution_log2 and resolution >= 4
     def nf(stage): return min(int(fmap_base / (2.0 ** (stage * fmap_decay))), fmap_max)
-    if structure is None: structure = 'linear' if is_template_graph else 'recursive'
+    if structure is None: structure = 'linear'# if is_template_graph else 'recursive' # TODO: uncomment when feature out supported for recursive
     act = leaky_relu
 
     images_in.set_shape([None, num_channels, resolution, resolution])
@@ -269,20 +269,23 @@ def D_paper(
                 if fused_scale:
                     with tf.variable_scope('Conv1_down'):
                         x = act(apply_bias(conv2d_downscale2d(x, fmaps=nf(res-2), kernel=3, use_wscale=use_wscale)))
+                        features = x
                 else:
                     with tf.variable_scope('Conv1'):
                         x = act(apply_bias(conv2d(x, fmaps=nf(res-2), kernel=3, use_wscale=use_wscale)))
+                    features = x
                     x = downscale2d(x)
             else: # 4x4
                 if mbstd_group_size > 1:
                     x = minibatch_stddev_layer(x, mbstd_group_size)
                 with tf.variable_scope('Conv'):
                     x = act(apply_bias(conv2d(x, fmaps=nf(res-1), kernel=3, use_wscale=use_wscale)))
+                    features = x
                 with tf.variable_scope('Dense0'):
                     x = act(apply_bias(dense(x, fmaps=nf(res-2), use_wscale=use_wscale)))
                 with tf.variable_scope('Dense1'):
                     x = apply_bias(dense(x, fmaps=1+label_size, gain=1, use_wscale=use_wscale))
-            return x
+            return x, features
     
     # Linear structure: simple but inefficient.
     if structure == 'linear':
@@ -290,12 +293,12 @@ def D_paper(
         x = fromrgb(img, resolution_log2)
         for res in range(resolution_log2, 2, -1):
             lod = resolution_log2 - res
-            x = block(x, res)
+            x, _ = block(x, res)
             img = downscale2d(img)
             y = fromrgb(img, res - 1)
             with tf.variable_scope('Grow_lod%d' % lod):
                 x = lerp_clip(x, y, lod_in - lod)
-        combo_out = block(x, 2)
+        combo_out, features_out = block(x, 2)
 
     # Recursive structure: complex but efficient.
     if structure == 'recursive':
@@ -306,10 +309,10 @@ def D_paper(
             if res > 2: y = cset(y, (lod_in > lod), lambda: lerp(x, fromrgb(downscale2d(images_in, 2**(lod+1)), res - 1), lod_in - lod))
             return y()
         combo_out = grow(2, resolution_log2 - 2)
+        features_out = None  # TODO: support recursive model building for conv features output
 
-    assert combo_out.dtype == tf.as_dtype(dtype)
     scores_out = tf.identity(combo_out[:, :1], name='scores_out')
-    labels_out = tf.identity(combo_out[:, 1:], name='labels_out')
-    return scores_out, labels_out
+    labels_out = tf.identity(combo_out[:, 1:], name='labels_out') #Note, labels_out is just logit for fakes
+    return scores_out, labels_out, features_out
 
 #----------------------------------------------------------------------------
