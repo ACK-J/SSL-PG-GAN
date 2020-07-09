@@ -31,15 +31,15 @@ def G_wgan_acgan(G, D, opt, training_set, minibatch_size, unlabeled_reals,
     fake_images_out = G.get_output_for(latents, labels, is_training=True)
 
     # get discrim. features
-    _, fake_labels_out, fake_features_out = fp32(D.get_output_for(fake_images_out, is_training=True))
-    _, _, real_features_out = fp32(D.get_output_for(unlabeled_reals, is_training=True))
+    fake_logits_out, _, fake_features_out = fp32(D.get_output_for(fake_images_out, is_training=False))
+    _, _, real_features_out = fp32(D.get_output_for(unlabeled_reals, is_training=False))
 
     # calculate feature-matching loss
     loss = tf.math.reduce_mean(tf.math.square(fake_features_out - real_features_out))
 
     if D.output_shapes[1][1] > 0:
         with tf.name_scope('LabelPenalty'):
-            label_penalty_fakes = tf.nn.softmax_cross_entropy_with_logits_v2(labels=labels, logits=fake_labels_out)
+            label_penalty_fakes = tf.nn.softmax_cross_entropy_with_logits_v2(labels=labels, logits=fake_logits_out)
         loss += label_penalty_fakes * cond_weight
     return loss
 
@@ -55,9 +55,9 @@ def D_wgangp_acgan(G, D, opt, training_set, minibatch_size, reals, labels, unlab
     latents = tf.random_normal([minibatch_size] + G.input_shapes[0][1:])
     fake_images_out = G.get_output_for(latents, labels, is_training=True)
 
-    output_before_softmax_lab, real_labels_out, _ = fp32(D.get_output_for(reals, is_training=True))
+    output_before_softmax_lab, real_flogit_out, _ = fp32(D.get_output_for(reals, is_training=True))
     output_before_softmax_unl, _, _ = fp32(D.get_output_for(unlabeled_reals, is_training=True))
-    output_before_softmax_fake, fake_labels_out, _ = fp32(D.get_output_for(fake_images_out, is_training=True))
+    output_before_softmax_fake, fake_flogit_out, _ = fp32(D.get_output_for(fake_images_out, is_training=True))
 
     # Direct port labeled loss from Salisman; no support for tensor indexing, so no work
     #simple_labels = tf.argmax(labels, axis=1)
@@ -90,13 +90,13 @@ def D_wgangp_acgan(G, D, opt, training_set, minibatch_size, reals, labels, unlab
     loss += gradient_penalty * (wgan_lambda / (wgan_target**2))
 
     with tf.name_scope('EpsilonPenalty'):
-        epsilon_penalty = tfutil.autosummary('Loss/epsilon_penalty', tf.square(output_before_softmax_lab))
+        epsilon_penalty = tfutil.autosummary('Loss/epsilon_penalty', tf.square(real_flogit_out))
     loss += epsilon_penalty * wgan_epsilon
 
     if D.output_shapes[1][1] > 0:
         with tf.name_scope('LabelPenalty'):
-            label_penalty_reals = tf.nn.softmax_cross_entropy_with_logits_v2(labels=labels, logits=real_labels_out)
-            label_penalty_fakes = tf.nn.softmax_cross_entropy_with_logits_v2(labels=labels, logits=fake_labels_out)
+            label_penalty_reals = tf.nn.softmax_cross_entropy_with_logits_v2(labels=labels, logits=output_before_softmax_lab)
+            label_penalty_fakes = tf.nn.softmax_cross_entropy_with_logits_v2(labels=labels, logits=output_before_softmax_fake)
             label_penalty_reals = tfutil.autosummary('Loss/label_penalty_reals', label_penalty_reals)
             label_penalty_fakes = tfutil.autosummary('Loss/label_penalty_fakes', label_penalty_fakes)
         loss += (label_penalty_reals + label_penalty_fakes) * cond_weight
