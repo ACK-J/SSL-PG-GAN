@@ -88,6 +88,11 @@ def D_wgangp_acgan(G, D, opt, training_set, minibatch_size, reals, labels, unlab
                0.5*tf.math.reduce_mean(tf.math.softplus(tf.math.reduce_logsumexp(output_before_softmax_unl, axis=1)))
     loss_fake = 0.5*tf.math.reduce_mean(tf.math.softplus(tf.math.reduce_logsumexp(output_before_softmax_fake, axis=1)))
 
+    # Using autosummary for tensorboard
+    loss_lab = tfutil.autosummary('Loss/loss_lab', loss_lab)
+    loss_unl = tfutil.autosummary('Loss/loss_unl', loss_unl)
+    loss_fake = tfutil.autosummary('Loss/loss_fake', loss_fake)
+
     # combine losses
     loss = loss_lab + loss_unl + loss_fake
 
