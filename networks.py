@@ -300,13 +300,14 @@ def D_paper(
                 x = lerp_clip(x, y, lod_in - lod)
         combo_out, features_out = block(x, 2)
 
+    # NOTE: Modified from original PG-GAN code to allow access to features used in feature mapping loss for the generator
     # Recursive structure: complex but efficient.
     if structure == 'recursive':
         def grow(res, lod):
             x = lambda: fromrgb(downscale2d(images_in, 2**lod), res)
             if lod > 0: 
                 x = cset(x, (lod_in < lod), lambda: grow(res + 1, lod - 1)[0])
-            x, features_out = block(x(), res); 
+            x, features_out = block(x(), res)
             y = lambda: x
             if res > 2: 
                 y = cset(y, (lod_in > lod), lambda: lerp(x, fromrgb(downscale2d(images_in, 2**(lod+1)), res - 1), lod_in - lod))

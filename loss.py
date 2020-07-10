@@ -24,22 +24,30 @@ def fp32(*values):
 
 def G_wgan_acgan(G, D, opt, training_set, minibatch_size, unlabeled_reals,
     cond_weight = 0.0): # Weight of the conditioning term.
+	'''
+    Calculating the feature matching loss for the generator
+    '''
 
     # get generated samples
     latents = tf.random_normal([minibatch_size] + G.input_shapes[0][1:])
-    labels = training_set.get_random_labels_tf(minibatch_size)
-    fake_images_out = G.get_output_for(latents, labels, is_training=True)
+    # get random labels for the generated samples
+    rand_gen_labels = training_set.get_random_labels_tf(minibatch_size)
+    # use the generator to deconvolve the latents into images 
+    fake_images_out = G.get_output_for(latents, rand_gen_labels, is_training=True)
 
-    # get discrim. features
+    # use the discriminator to get the features from the last convolution layer as well as the logits
     fake_logits_out, _, fake_features_out = fp32(D.get_output_for(fake_images_out, is_training=False))
+    # Pass the unlabeled real data to the discriminator and grab the real features out from the last convolutional layer
     _, _, real_features_out = fp32(D.get_output_for(unlabeled_reals, is_training=False))
 
     # calculate feature-matching loss
+    # mean squared error of fake and real features
     loss = tf.math.reduce_mean(tf.math.square(fake_features_out - real_features_out))
 
     if D.output_shapes[1][1] > 0:
         with tf.name_scope('LabelPenalty'):
-            label_penalty_fakes = tf.nn.softmax_cross_entropy_with_logits_v2(labels=labels, logits=fake_logits_out)
+            # pass fake logits and labels to a softmax layer  
+            label_penalty_fakes = tf.nn.softmax_cross_entropy_with_logits_v2(labels=rand_gen_labels, logits=fake_logits_out)
         loss += label_penalty_fakes * cond_weight
     return loss
 
@@ -52,14 +60,19 @@ def D_wgangp_acgan(G, D, opt, training_set, minibatch_size, reals, labels, unlab
     wgan_target     = 0.1,      # Target value for gradient magnitudes.
     cond_weight     = 0.0):     # Weight of the conditioning terms.
 
+    # Generate latents and pass through the generator to decolvolve into fake images
     latents = tf.random_normal([minibatch_size] + G.input_shapes[0][1:])
     fake_images_out = G.get_output_for(latents, labels, is_training=True)
 
+    # REALS
     output_before_softmax_lab, real_flogit_out, _ = fp32(D.get_output_for(reals, is_training=True))
+    # UNLABELED REALS
     output_before_softmax_unl, _, _ = fp32(D.get_output_for(unlabeled_reals, is_training=True))
+    # GENERATED
     output_before_softmax_fake, fake_flogit_out, _ = fp32(D.get_output_for(fake_images_out, is_training=True))
 
-    # Direct port labeled loss from Salisman; no support for tensor indexing, so no work
+    # Direct port labeled loss from Tim Salimans et al. https://arxiv.org/pdf/1606.03498.pdf
+    # no support for tensor indexing, so no work
     #simple_labels = tf.argmax(labels, axis=1)
     #z_exp_lab = tf.math.reduce_mean(tf.math.reduce_logsumexp(output_before_softmax_lab, axis=1))
     #l_lab = output_before_softmax_lab[tf.range(minibatch_size), simple_labels]
@@ -68,7 +81,7 @@ def D_wgangp_acgan(G, D, opt, training_set, minibatch_size, reals, labels, unlab
     # labeled sample loss is equivalent to cross entropy w/ softmax (I think?)
     loss_lab = tf.math.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=output_before_softmax_lab))
 
-    # Direct port of unlabeled loss and fake loss.
+    # Direct port of unlabeled loss and fake loss. from Tim Salimans et al. https://arxiv.org/pdf/1606.03498.pdf
     #z_exp_unl = tf.math.reduce_mean(tf.math.reduce_logsumexp(output_before_softmax_unl, axis=1))
     loss_unl = -0.5*tf.math.reduce_mean(tf.math.reduce_logsumexp(output_before_softmax_unl, axis=1)) + \
                0.5*tf.math.reduce_mean(tf.math.softplus(tf.math.reduce_logsumexp(output_before_softmax_unl, axis=1)))
