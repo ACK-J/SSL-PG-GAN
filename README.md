@@ -4,7 +4,7 @@
 This project builds mainly off of the code presented in [Progressive Growing of GAN's for Improved Quality, Stability and Variation](https://arxiv.org/pdf/1710.10196.pdf)
  by Kerras et al. ICLR 2018. Inspiration also came from OpenAI's [Improved Techniques for Training GANs](https://arxiv.org/pdf/1606.03498.pdf) which details semi-supervised implementations of GANs.
  
- My research tries to incorporate semi-supervised learning alongside progressively growing training to get the best of both. Not needing to worry about an overabundance of labeled data and the ability to generate high definition images.  
+My research incorporates semi-supervised learning alongside progressively growing training to achieve a model that can utilize both. Thus we do not need to worry about an overabundance of costly labeled data and are still abile to generate high definition images.  
 
 
 

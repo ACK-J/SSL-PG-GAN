@@ -82,6 +82,7 @@ def D_wgangp_acgan(G, D, opt, training_set, minibatch_size, reals, labels, unlab
     loss_lab = tf.math.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=output_before_softmax_lab))
 
     # Direct port of unlabeled loss and fake loss. from Tim Salimans et al. https://arxiv.org/pdf/1606.03498.pdf
+    # Code reference https://github.com/openai/improved-gan/blob/master/mnist_svhn_cifar10/train_cifar_feature_matching.py#L87
     #z_exp_unl = tf.math.reduce_mean(tf.math.reduce_logsumexp(output_before_softmax_unl, axis=1))
     loss_unl = -0.5*tf.math.reduce_mean(tf.math.reduce_logsumexp(output_before_softmax_unl, axis=1)) + \
                0.5*tf.math.reduce_mean(tf.math.softplus(tf.math.reduce_logsumexp(output_before_softmax_unl, axis=1)))
