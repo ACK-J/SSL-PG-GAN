@@ -24,10 +24,9 @@ def fp32(*values):
 
 def G_wgan_acgan(G, D, opt, training_set, minibatch_size, unlabeled_reals,
     cond_weight = 0.0): # Weight of the conditioning term.
-	'''
+    '''
     Calculating the feature matching loss for the generator
     '''
-
     # get generated samples
     latents = tf.random_normal([minibatch_size] + G.input_shapes[0][1:])
     # get random labels for the generated samples

@@ -191,11 +191,13 @@ def train_progressive_gan(
     D_opt = tfutil.Optimizer(name='TrainD', learning_rate=lrate_in, **config.D_opt)
     for gpu in range(config.num_gpus):
         with tf.name_scope('GPU%d' % gpu), tf.device('/gpu:%d' % gpu):
+            print('GPU%d' % gpu)
             G_gpu = G if gpu == 0 else G.clone(G.name + '_shadow')
             D_gpu = D if gpu == 0 else D.clone(D.name + '_shadow')
             lod_assign_ops = [tf.assign(G_gpu.find_var('lod'), lod_in), tf.assign(D_gpu.find_var('lod'), lod_in)]
             reals_gpu = process_reals(reals_split[gpu], lod_in, mirror_augment, training_set.dynamic_range, drange_net)
             unlabeled_reals_gpu = process_reals(unlabeled_reals_split[gpu], lod_in, mirror_augment, training_set.dynamic_range, drange_net)
+            print(tf.shape(unlabeled_reals_gpu)[0])
             labels_gpu = labels_split[gpu]
             with tf.name_scope('G_loss'), tf.control_dependencies(lod_assign_ops):
                 G_loss = tfutil.call_func_by_name(G=G_gpu, D=D_gpu, opt=G_opt, training_set=training_set, minibatch_size=minibatch_split, unlabeled_reals=unlabeled_reals_gpu, **config.G_loss)
