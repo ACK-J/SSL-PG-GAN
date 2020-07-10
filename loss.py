@@ -42,7 +42,8 @@ def G_wgan_acgan(G, D, opt, training_set, minibatch_size, unlabeled_reals,
 
     # calculate feature-matching loss
     # mean squared error of fake and real features
-    loss = tf.math.reduce_mean(tf.math.square(fake_features_out - real_features_out))
+    feat_diff = tf.math.reduce_mean(fake_features_out, axis=0) - tf.math.reduce_mean(real_features_out, axis=0)
+    loss = tf.math.reduce_mean(tf.math.square(feat_diff))
 
     if D.output_shapes[1][1] > 0:
         with tf.name_scope('LabelPenalty'):
