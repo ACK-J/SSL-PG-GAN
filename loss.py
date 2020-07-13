@@ -44,11 +44,14 @@ def G_wgan_acgan(G, D, opt, training_set, minibatch_size, unlabeled_reals,
     feat_diff = tf.math.reduce_mean(fake_features_out, axis=0) - tf.math.reduce_mean(real_features_out, axis=0)
     loss = tf.math.reduce_mean(tf.math.square(feat_diff))
 
+    G_loss_pre_LabelPenalty = tfutil.autosummary('Loss/G_feat_match_loss_pre_LabelPenalty', loss)
+
     if D.output_shapes[1][1] > 0:
         with tf.name_scope('LabelPenalty'):
             # pass fake logits and labels to a softmax layer  
             label_penalty_fakes = tf.nn.softmax_cross_entropy_with_logits_v2(labels=rand_gen_labels, logits=fake_logits_out)
         loss += label_penalty_fakes * cond_weight
+    loss = tfutil.autosummary('Loss/G_feat_match_loss_post_LabelPenalty', loss)
     return loss
 
 #----------------------------------------------------------------------------
@@ -89,12 +92,14 @@ def D_wgangp_acgan(G, D, opt, training_set, minibatch_size, reals, labels, unlab
     loss_fake = 0.5*tf.math.reduce_mean(tf.math.softplus(tf.math.reduce_logsumexp(output_before_softmax_fake, axis=1)))
 
     # Using autosummary for tensorboard
-    loss_lab = tfutil.autosummary('Loss/loss_lab', loss_lab)
-    loss_unl = tfutil.autosummary('Loss/loss_unl', loss_unl)
-    loss_fake = tfutil.autosummary('Loss/loss_fake', loss_fake)
+    loss_lab = tfutil.autosummary('Loss/D_loss_lab', loss_lab)
+    loss_unl = tfutil.autosummary('Loss/D_loss_unl', loss_unl)
+    loss_fake = tfutil.autosummary('Loss/D_loss_fake', loss_fake)
 
     # combine losses
     loss = loss_lab + loss_unl + loss_fake
+
+    loss = tfutil.autosummary('Loss/D_combined_loss_pre_penalties', loss)
 
     with tf.name_scope('GradientPenalty'):
         mixing_factors = tf.random_uniform([minibatch_size, 1, 1, 1], 0.0, 1.0, dtype=fake_images_out.dtype)
@@ -119,6 +124,8 @@ def D_wgangp_acgan(G, D, opt, training_set, minibatch_size, reals, labels, unlab
             label_penalty_reals = tfutil.autosummary('Loss/label_penalty_reals', label_penalty_reals)
             label_penalty_fakes = tfutil.autosummary('Loss/label_penalty_fakes', label_penalty_fakes)
         loss += (label_penalty_reals + label_penalty_fakes) * cond_weight
+    
+    loss = tfutil.autosummary('Loss/D_combined_loss_post_penalties', loss)
     return loss
 
 #----------------------------------------------------------------------------
