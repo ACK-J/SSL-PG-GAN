@@ -54,6 +54,27 @@ below so you can follow along and get something running
 https://drive.google.com/file/d/13OHIv7A_AFbKWe_URwbyOvEKRnPovrAq/view?usp=sharing
 
 - Once downloaded place into the root of the SSL-PG-GAN folder
+```
+---------------------------------------------
+The training data folder should look like : 
+<SSL-PG-GAN Root Folder>
+                |--Your DataFolder Named Anything
+                        |--Unlabeled
+                                |--image 1
+                                |--image 2
+                                |--image 3 ...
+                        |--Labeled
+                                |--Class 1
+                                        |--image 1
+                                        |--image 2
+                                        |--image 3 ...
+                                |--Class 2
+                                        |--image 1
+                                        |--image 2
+                                        |--image 3 ...
+                                |--Class 3 ...
+---------------------------------------------
+```
 
 **Please note that every image must:**
 
@@ -91,9 +112,15 @@ _Make sure the amount of GPU's selected matches the uncommented line in the conf
 the training using `screen` or `tmux` so that if you lose connection via SSH you won't
 have to restart the training.  
 
+# Evaluating
+`tensorboard --logdir results/000-ssl-pgan-sslpggan-preset-v2-4gpus-fp32/ --port 8888`
+- Do not just copy and paste. Replace the `results/000-ssl-pgan-sslpggan-preset-v2-4gpus-fp32/` with the results directory you want to view.
+- Once tensorboard boots up it will give you a URL to go to an address such as... `TensorBoard 1.14.0 at http://192.168.10.5:8888/ (Press CTRL+C to quit)`
+ - Your IP-address will be different
+
 # Testing
  `python3 test_discriminator.py <FULL path to out-of-sample image directory> <id of training round>`
-- You can find the training round by going to `results/` directory. The number at the beginning of each directory identifies each training session. Make sure tp use the entire 3 digit number ex) 000 or 001 etc...
+- You can find the training round by going to `results/` directory. The number at the beginning of each directory identifies each training session. Make sure to use the entire 3 digit number ex) 000 or 001 etc...
 
 ## Comments and Tips
 - It is not advised to run this code in a VM or a docker container due to the fact that it is tricky to pass graphics cards into them and have them function properly. This
