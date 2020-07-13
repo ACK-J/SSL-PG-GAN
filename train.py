@@ -17,6 +17,7 @@ import config
 import tfutil
 import dataset
 import misc
+import datetime
 
 TrainingSpeedInt = 1000
 TrainingSpeedFloat = 1000.0
@@ -191,20 +192,20 @@ def train_progressive_gan(
     D_opt = tfutil.Optimizer(name='TrainD', learning_rate=lrate_in, **config.D_opt)
     for gpu in range(config.num_gpus):
         with tf.name_scope('GPU%d' % gpu), tf.device('/gpu:%d' % gpu):
-            print('GPU%d' % gpu)
             G_gpu = G if gpu == 0 else G.clone(G.name + '_shadow')
             D_gpu = D if gpu == 0 else D.clone(D.name + '_shadow')
             lod_assign_ops = [tf.assign(G_gpu.find_var('lod'), lod_in), tf.assign(D_gpu.find_var('lod'), lod_in)]
             reals_gpu = process_reals(reals_split[gpu], lod_in, mirror_augment, training_set.dynamic_range, drange_net)
             unlabeled_reals_gpu = process_reals(unlabeled_reals_split[gpu], lod_in, mirror_augment, training_set.dynamic_range, drange_net)
-            print(tf.shape(unlabeled_reals_gpu)[0])
             labels_gpu = labels_split[gpu]
             with tf.name_scope('G_loss'), tf.control_dependencies(lod_assign_ops):
                 G_loss = tfutil.call_func_by_name(G=G_gpu, D=D_gpu, opt=G_opt, training_set=training_set, minibatch_size=minibatch_split, unlabeled_reals=unlabeled_reals_gpu, **config.G_loss)
             with tf.name_scope('D_loss'), tf.control_dependencies(lod_assign_ops):
                 D_loss = tfutil.call_func_by_name(G=G_gpu, D=D_gpu, opt=D_opt, training_set=training_set, minibatch_size=minibatch_split, reals=reals_gpu, labels=labels_gpu, unlabeled_reals=unlabeled_reals_gpu, **config.D_loss)
+            
             G_opt.register_gradients(tf.reduce_mean(G_loss), G_gpu.trainables)
             D_opt.register_gradients(tf.reduce_mean(D_loss), D_gpu.trainables)
+            print('GPU %d loaded!' % gpu)
     G_train_op = G_opt.apply_updates()
     D_train_op = D_opt.apply_updates()
 
@@ -262,7 +263,7 @@ def train_progressive_gan(
             maintenance_start_time = cur_time
 
             # Report progress.
-            print('tick %-5d kimg %-8.1f lod %-5.2f minibatch %-4d time %-12s sec/tick %-7.1f sec/kimg %-7.2f maintenance %.1f' % (
+            print('tick %-5d kimg %-8.1f lod %-5.2f minibatch %-4d time %-12s sec/tick %-7.1f sec/kimg %-7.2f maintenance %.1f date %s' % (
                 tfutil.autosummary('Progress/tick', cur_tick),
                 tfutil.autosummary('Progress/kimg', cur_nimg / TrainingSpeedFloat),
                 tfutil.autosummary('Progress/lod', sched.lod),
@@ -270,7 +271,9 @@ def train_progressive_gan(
                 misc.format_time(tfutil.autosummary('Timing/total_sec', total_time)),
                 tfutil.autosummary('Timing/sec_per_tick', tick_time),
                 tfutil.autosummary('Timing/sec_per_kimg', tick_time / tick_kimg),
-                tfutil.autosummary('Timing/maintenance_sec', maintenance_time)))
+                tfutil.autosummary('Timing/maintenance_sec', maintenance_time))
+                datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
             tfutil.autosummary('Timing/total_hours', total_time / (60.0 * 60.0))
             tfutil.autosummary('Timing/total_days', total_time / (24.0 * 60.0 * 60.0))
             tfutil.save_summaries(summary_log, cur_nimg)

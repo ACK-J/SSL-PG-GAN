@@ -164,10 +164,17 @@ def G_paper(
     
     resolution_log2 = int(np.log2(resolution))
     assert resolution == 2**resolution_log2 and resolution >= 4
-    def nf(stage): return min(int(fmap_base / (2.0 ** (stage * fmap_decay))), fmap_max)
-    def PN(x): return pixel_norm(x, epsilon=pixelnorm_epsilon) if use_pixelnorm else x
-    if latent_size is None: latent_size = nf(0)
-    if structure is None: structure = 'linear' if is_template_graph else 'recursive'
+
+    def nf(stage): 
+        return min(int(fmap_base / (2.0 ** (stage * fmap_decay))), fmap_max)
+    def PN(x): 
+        return pixel_norm(x, epsilon=pixelnorm_epsilon) if use_pixelnorm else x
+
+    if latent_size is None: 
+        latent_size = nf(0)
+    if structure is None: 
+        structure = 'linear' if is_template_graph else 'recursive'
+
     act = leaky_relu if use_leakyrelu else tf.nn.relu
     
     latents_in.set_shape([None, latent_size])
@@ -249,8 +256,10 @@ def D_paper(
     
     resolution_log2 = int(np.log2(resolution))
     assert resolution == 2**resolution_log2 and resolution >= 4
-    def nf(stage): return min(int(fmap_base / (2.0 ** (stage * fmap_decay))), fmap_max)
-    if structure is None: structure = 'linear' if is_template_graph else 'recursive'
+    def nf(stage): 
+        return min(int(fmap_base / (2.0 ** (stage * fmap_decay))), fmap_max)
+    if structure is None: 
+        structure = 'linear' if is_template_graph else 'recursive'
     act = leaky_relu
 
     images_in.set_shape([None, num_channels, resolution, resolution])
