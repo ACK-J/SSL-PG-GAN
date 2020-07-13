@@ -271,8 +271,8 @@ def train_progressive_gan(
                 misc.format_time(tfutil.autosummary('Timing/total_sec', total_time)),
                 tfutil.autosummary('Timing/sec_per_tick', tick_time),
                 tfutil.autosummary('Timing/sec_per_kimg', tick_time / tick_kimg),
-                tfutil.autosummary('Timing/maintenance_sec', maintenance_time))
-                datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                tfutil.autosummary('Timing/maintenance_sec', maintenance_time),
+                datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
 
             tfutil.autosummary('Timing/total_hours', total_time / (60.0 * 60.0))
             tfutil.autosummary('Timing/total_days', total_time / (24.0 * 60.0 * 60.0))

@@ -38,6 +38,7 @@ if __name__ == '__main__':
     if not os.path.isdir(args[1]):
         print("Error: " + args[1] + " does not exist")
         exit(1)
+    # Checking to see if there is a / at the end of the string entered
     if args[1][-1] != '/':
         args[1] = args[1] + "/"
     
