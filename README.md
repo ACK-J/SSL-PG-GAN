@@ -54,6 +54,27 @@ below so you can follow along and get something running
 https://drive.google.com/file/d/13OHIv7A_AFbKWe_URwbyOvEKRnPovrAq/view?usp=sharing
 
 - Once downloaded place into the root of the SSL-PG-GAN folder
+```
+---------------------------------------------
+The training data folder should look like : 
+<SSL-PG-GAN Root Folder>
+                |--Your DataFolder Named Anything
+                        |--Unlabeled
+                                |--image 1
+                                |--image 2
+                                |--image 3 ...
+                        |--Labeled
+                                |--Class 1
+                                        |--image 1
+                                        |--image 2
+                                        |--image 3 ...
+                                |--Class 2
+                                        |--image 1
+                                        |--image 2
+                                        |--image 3 ...
+                                |--Class 3 ...
+---------------------------------------------
+```
 
 **Please note that every image must:**
 
