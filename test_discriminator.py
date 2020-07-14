@@ -30,7 +30,7 @@ if __name__ == '__main__':
     givenCorrectClassIndex= False
     #  Checking args
     if len(args) != 4 and len(args) != 5:
-        print("Error Wrong Arguments: python3 test_discriminator.py <path to out of sample images> <id of training "
+        print("Error Wrong Arguments: python3 test_discriminator.py <FULL path to out of sample images> <id of training "
               "round> <pixels> <OPTIONAL: index of correct class> \npython3 test_discriminator.py /home/user/OutOfSample/Images/ 2 512 1")
         exit(1)
     if len(args) == 5:
