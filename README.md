@@ -119,8 +119,11 @@ have to restart the training.
  - Your IP-address will be different
 
 # Testing
- `python3 test_discriminator.py <FULL path to out-of-sample image directory> <id of training round>`
+ ` python3 test_discriminator.py <FULL path to out of sample images> <id of training round> <pixels> <OPTIONAL: index of correct class>`
+ 
+ `python3 test_discriminator.py /home/user/OutOfSample/Images/ 2 512 1`
 - You can find the training round by going to `results/` directory. The number at the beginning of each directory identifies each training session. Make sure to use the entire 3 digit number ex) 000 or 001 etc...
+- Make sure `export CUDA_VISIBLE_DEVICES=` is set to an open GPU
 
 ## Comments and Tips
 - It is not advised to run this code in a VM or a docker container due to the fact that it is tricky to pass graphics cards into them and have them function properly. This
