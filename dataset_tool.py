@@ -301,13 +301,13 @@ def create_from_images(labeled_tfrecord_dir, unlabeled_tfrecord_dir, labeled_dir
         labeled_dir = labeled_dir[:-1]
     if unlabeled_dir[-1] == "/" and unlabeled_dir[-2] == "/":
         unlabeled_dir = unlabeled_dir[:-1]
-     
-    # Checking to make sure the path exists    
+
+    # Checking to make sure the path exists
     if not os.path.isdir(labeled_dir):
         error("Path " + labeled_dir + " does not exist!")
     if not os.path.isdir(unlabeled_dir):
         error("Path " + unlabeled_dir + " does not exist!")
-    
+
     # This lists all of the directories in the provided labeled directory. Each class should have its own folder
     # within this directory. It also prepends the full path before it and makes sure .git isn't included
     classes_dir = [labeled_dir + name for name in os.listdir(labeled_dir) if os.path.isdir(os.path.join(labeled_dir, name)) and name != '.git']
@@ -321,8 +321,9 @@ def create_from_images(labeled_tfrecord_dir, unlabeled_tfrecord_dir, labeled_dir
     # Go through that array and assign Labels to each image
     labels = []
     for i in range(Num_classes):
+        print("Class " + str(i) + " is " + str(classes_dir[i].split("/")[-1]))
         labels += [i] * len(labeled_filenames[i])
-    print("Number of classes: " + str(len(classes_dir)))
+    print("Number of classes: " + str(Num_classes))
 
     # Converting labels into np array and one hot encoding it
     labels = np.array(labels)
@@ -404,6 +405,7 @@ if __name__ == "__main__":
     create_from_images("Labeled", "Unlabeled", args[0] + "/", args[1] + "/", False)
 
 # ----------------------------------------------------------------------------
+
 
 
 
