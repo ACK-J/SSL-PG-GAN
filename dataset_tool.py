@@ -373,10 +373,10 @@ def create_from_images(labeled_tfrecord_dir, unlabeled_tfrecord_dir, labeled_dir
 
     #  Adding unlabeled data
     with TFRecordExporter(unlabeled_tfrecord_dir, len(unlabeled_filenames)) as tfr2:
-        fake_labels = [Num_classes - 1] * len(unlabeled_filenames)
-        fake_labels = np.array(fake_labels)
-        fake_onehot = np.zeros((fake_labels.size, np.max(fake_labels) + 1), dtype=np.float32)
-        fake_onehot[np.arange(fake_labels.size), fake_labels] = 1.0
+        #fake_labels = [Num_classes - 1] * len(unlabeled_filenames)
+        #fake_labels = np.array(fake_labels)
+        #fake_onehot = np.zeros((fake_labels.size, np.max(fake_labels) + 1), dtype=np.float32)
+        #fake_onehot[np.arange(fake_labels.size), fake_labels] = 1.0
 
         order = tfr2.choose_shuffled_order() if shuffle else np.arange(len(unlabeled_filenames))
         for idx in range(order.size):
@@ -386,7 +386,7 @@ def create_from_images(labeled_tfrecord_dir, unlabeled_tfrecord_dir, labeled_dir
             else:
                 img = img.transpose(2, 0, 1)  # HWC => CHW
             tfr2.add_image(img)
-        tfr2.add_labels(fake_onehot[order])
+        #tfr2.add_labels(fake_onehot[order])
 
 
 # ----------------------------------------------------------------------------
