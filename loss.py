@@ -84,7 +84,7 @@ def D_wgangp_acgan(G, D, opt, training_set, minibatch_size, reals, labels, unlab
     # labeled sample loss is equivalent to cross entropy w/ softmax (I think?)
     # loss_lab = tf.math.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=output_before_softmax_lab))
 
-    l_lab = output_before_softmax_lab[tf.range(minibatch_size),labels]
+    l_lab = tf.gather(output_before_softmax_lab, tf.range(minibatch_size),labels)
     loss_lab = -tf.math.reduce_sum(l_lab) + tf.math.reduce_sum(tf.math.reduce_sum(tf.math.reduce_logsumexp(output_before_softmax_lab)))
 
     # Direct port of unlabeled loss and fake loss. from Tim Salimans et al. https://arxiv.org/pdf/1606.03498.pdf
