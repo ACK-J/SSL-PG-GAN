@@ -5,6 +5,7 @@ warnings.filterwarnings('ignore',category=FutureWarning)
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 
 import numpy as np
+import sys
 import tensorflow as tf
 import glob
 import config
@@ -20,17 +21,17 @@ def fp32(*values):
     return values if len(values) >= 2 else values[0]
 
 def test_discriminator(D, tensor):
-    scores, labels = fp32(D.get_output_for(tensor, is_training=False))
-    return (scores, labels)
+    K_logits_out, fake_logit_out, features_out = fp32(D.get_output_for(tensor, is_training=False))
+    return (K_logits_out, fake_logit_out, features_out)
 
 
 if __name__ == '__main__':
     args = sys.argv
     givenCorrectClassIndex= False
     #  Checking args
-    if len(args) < 4:
+    if len(args) != 4 and len(args) != 5:
         print("Error Wrong Arguments: python3 test_discriminator.py <path to out of sample images> <id of training "
-              "round> <pixels> <OPTIONAL: index of correct class> \npython3 test_discriminator.py /home/user/OutOfSample/Images/ 2 512")
+              "round> <pixels> <OPTIONAL: index of correct class> \npython3 test_discriminator.py /home/user/OutOfSample/Images/ 2 512 1")
         exit(1)
     if len(args) == 5:
     	givenCorrectClassIndex = True
@@ -66,19 +67,25 @@ if __name__ == '__main__':
 
     # Go through every image that needs to be tested
     for filename in os.listdir(args[1]):
-    	guesses+=1
-    	#tensor = np.zeros((1, 3, 512, 512))
+        guesses+=1
+        #tensor = np.zeros((1, 3, 512, 512))
         print(filename)
         img = np.asarray(PIL.Image.open(args[1] + filename)).reshape(3,ndim,ndim)
         img = np.expand_dims(img, axis=0) # makes the image (1,3,512,512)
-        scores, labels_out = test_discriminator(D, img)
-
-        correctLabel = int(args[4])
+        K_logits_out, fake_logit_out, features_out = test_discriminator(D, img)
+        
+        if len(args) == 5: 
+            correctLabel = int(args[4])
 
         if givenCorrectClassIndex:
-	        sample_probs = tf.nn.softmax(labels_out)
+	        sample_probs = tf.nn.softmax(K_logits_out)
 	        label = np.argmax(sample_probs.eval()[0], axis=0)
 	        if label == correctLabel:
 	            correct += 1
 	        print("LABEL: ",label)
 	        print("Correct: ", correct, "\n", "Guesses: ", guesses, "\n", "Percent correct: ", (correct/guesses))
+        else:
+            sample_probs = tf.nn.softmax(K_logits_out)
+            label = np.argmax(sample_probs.eval()[0], axis=0)
+            print("LABEL: ",label)
+            print("K_logits_out %s \nFake_logits_out %s \nFeatures_out %s" % (K_logits_out, fake_logit_out, features_out))
