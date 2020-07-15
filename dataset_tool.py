@@ -353,7 +353,7 @@ def create_from_images(labeled_tfrecord_dir, unlabeled_tfrecord_dir, labeled_dir
 
 
     # NEED TO DEBUG!!!!!!!!!
-    #  Adding labeled data
+    # Adding labeled data
     with TFRecordExporter(labeled_tfrecord_dir, len(labels)) as tfr:
         order = tfr.choose_shuffled_order() if shuffle else np.arange(len(labels))
         #  Iterate through each class

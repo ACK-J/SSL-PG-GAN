@@ -34,7 +34,7 @@ if __name__ == '__main__':
               "round> <pixels> <OPTIONAL: index of correct class> \npython3 test_discriminator.py /home/user/OutOfSample/Images/ 2 512 1")
         exit(1)
     if len(args) == 5:
-    	givenCorrectClassIndex = True
+        givenCorrectClassIndex = True
 
 
     # Making sure the directory exists
@@ -45,7 +45,7 @@ if __name__ == '__main__':
     # Checking to see if there is a / at the end of the string entered
     if args[1][-1] != '/':
         args[1] = args[1] + "/"
-    
+
     # Initializing tensorflow
     np.random.seed(config.random_seed)
     print('Initializing TensorFlow...')
@@ -59,7 +59,7 @@ if __name__ == '__main__':
     print('Loading discriminator from "%s"...' % network_pkl)
     G, D, Gs = misc.load_network_pkl(run_id, snapshot)
 
-    # example ndim = 512 for an image that is 512x512 pixels 
+    # example ndim = 512 for an image that is 512x512 pixels
     # All images for SSL-PGGAN must be square
     ndim = int(args[3])
     correct=0
@@ -73,19 +73,21 @@ if __name__ == '__main__':
         img = np.asarray(PIL.Image.open(args[1] + filename)).reshape(3,ndim,ndim)
         img = np.expand_dims(img, axis=0) # makes the image (1,3,512,512)
         K_logits_out, fake_logit_out, features_out = test_discriminator(D, img)
-        
-        if len(args) == 5: 
+
+        if len(args) == 5:
             correctLabel = int(args[4])
 
         if givenCorrectClassIndex:
-	        sample_probs = tf.nn.softmax(K_logits_out)
-	        label = np.argmax(sample_probs.eval()[0], axis=0)
-	        if label == correctLabel:
-	            correct += 1
-	        print("LABEL: ",label)
-	        print("Correct: ", correct, "\n", "Guesses: ", guesses, "\n", "Percent correct: ", (correct/guesses))
+                sample_probs = tf.nn.softmax(K_logits_out)
+                print("Softmax output", sample_probs.eval())
+                label = np.argmax(sample_probs.eval()[0], axis=0)
+                if label == correctLabel:
+                    correct += 1
+                print("LABEL: ",label)
+                print("Correct: ", correct, "\n", "Guesses: ", guesses, "\n", "Percent correct: ", (correct/guesses))
         else:
             sample_probs = tf.nn.softmax(K_logits_out)
             label = np.argmax(sample_probs.eval()[0], axis=0)
             print("LABEL: ",label)
             print("K_logits_out %s \nFake_logits_out %s \nFeatures_out %s" % (K_logits_out, fake_logit_out, features_out))
+        print()
