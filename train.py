@@ -133,6 +133,11 @@ class TrainingSchedule:
         self.D_lrate = D_lrate_dict.get(self.resolution, D_lrate_base)
         self.tick_kimg = tick_kimg_dict.get(self.resolution, tick_kimg_base)
 
+def test_discriminator(D, tensor):
+    K_logits_out, fake_logit_out, features_out = fp32(D.get_output_for(tensor, is_training=False))
+    return (K_logits_out, fake_logit_out, features_out)
+
+
 #----------------------------------------------------------------------------
 # Main training script.
 # To run, comment/uncomment appropriate lines in config.py and launch train.py.
@@ -172,7 +177,7 @@ def train_progressive_gan(
             print("Training-Set Label Size: ",training_set.label_size)
             print("Unlabeled-Training-Set Label Size: ",unlabeled_training_set.label_size)
             G = tfutil.Network('G', num_channels=training_set.shape[0], resolution=training_set.shape[1], label_size=training_set.label_size, **config.G)
-            D = tfutil.Network('D', num_channels=training_set.shape[0], resolution=training_set.shape[1], label_size=training_set.label_size, **config.D)
+            D = tfutil.Network('D', num_channels=training_set.shape[0], resolution=training_set.shape[1], **config.D)
             Gs = G.clone('Gs')
         Gs_update_op = Gs.setup_as_moving_average_of(G, beta=G_smoothing)
     G.print_layers(); D.print_layers()
@@ -203,7 +208,7 @@ def train_progressive_gan(
                 G_loss = tfutil.call_func_by_name(G=G_gpu, D=D_gpu, opt=G_opt, training_set=training_set, minibatch_size=minibatch_split, unlabeled_reals=unlabeled_reals_gpu, **config.G_loss)
             with tf.name_scope('D_loss'), tf.control_dependencies(lod_assign_ops):
                 D_loss = tfutil.call_func_by_name(G=G_gpu, D=D_gpu, opt=D_opt, training_set=training_set, minibatch_size=minibatch_split, reals=reals_gpu, labels=labels_gpu, unlabeled_reals=unlabeled_reals_gpu, **config.D_loss)
-            
+
             G_opt.register_gradients(tf.reduce_mean(G_loss), G_gpu.trainables)
             D_opt.register_gradients(tf.reduce_mean(D_loss), D_gpu.trainables)
             print('GPU %d loaded!' % gpu)
@@ -279,6 +284,37 @@ def train_progressive_gan(
             tfutil.autosummary('Timing/total_days', total_time / (24.0 * 60.0 * 60.0))
             tfutil.save_summaries(summary_log, cur_nimg)
 
+
+            # example ndim = 512 for an image that is 512x512 pixels
+            # All images for SSL-PGGAN must be square
+            ndim = 512
+            correct=0
+            guesses=0
+            validation_dog = '/home/jack/WORKHERE/SSL-PG-GAN/CatVDog/PetImages/validation_dog/'
+            validation_cat = '/home/jack/WORKHERE/SSL-PG-GAN/CatVDog/PetImages/validation_cat/'
+            dir_tuple = (validation_dog, validation_cat)
+            for indx, directory in enumerate(dir_tuple):
+                # Go through every image that needs to be tested
+                for filename in os.listdir(directory):
+                    guesses+=1
+                    #tensor = np.zeros((1, 3, 512, 512))
+                    print(filename)
+                    img = np.asarray(PIL.Image.open(directory + filename)).reshape(3,ndim,ndim)
+                    img = np.expand_dims(img, axis=0) # makes the image (1,3,512,512)
+                    K_logits_out, fake_logit_out, features_out = test_discriminator(D, img)
+
+                    sample_probs = tf.nn.softmax(K_logits_out)
+                    print("Softmax output", sample_probs.eval())
+                    label = np.argmax(sample_probs.eval()[0], axis=0)
+                    if label == indx:
+                        correct += 1
+                    print("LABEL: ",label)
+                    validation = (correct/guesses)
+                    tfutil.autosummary('Accuracy/Validation', validation)
+                    print("Correct: ", correct, "\n", "Guesses: ", guesses, "\n", "Percent correct: ", validation)
+                    print()
+
+
             # Save snapshots.
             if cur_tick % image_snapshot_ticks == 0 or done:
                 grid_fakes = Gs.run(grid_latents, grid_labels, minibatch_size=sched.minibatch//config.num_gpus)
@@ -311,3 +347,5 @@ if __name__ == "__main__":
     print('Exiting...')
 
 #----------------------------------------------------------------------------
+
+
