@@ -71,10 +71,10 @@ class TFRecordExporter:
             assert self.shape[0] in [1, 3]
             assert self.shape[1] == self.shape[2]
             assert self.shape[1] == 2 ** self.resolution_log2
-            tfr_opt = tf.python_io.TFRecordOptions(tf.python_io.TFRecordCompressionType.NONE)
+            tfr_opt = tf.io.TFRecordOptions(tf.compat.v1.python_io.TFRecordCompressionType.NONE)
             for lod in range(self.resolution_log2 - 1):
                 tfr_file = self.tfr_prefix + '-r%02d.tfrecords' % (self.resolution_log2 - lod)
-                self.tfr_writers.append(tf.python_io.TFRecordWriter(tfr_file, tfr_opt))
+                self.tfr_writers.append(tf.io.TFRecordWriter(tfr_file, tfr_opt))
         assert img.shape == self.shape
         for lod, tfr_writer in enumerate(self.tfr_writers):
             if lod:
@@ -353,20 +353,35 @@ def create_from_images(labeled_tfrecord_dir, unlabeled_tfrecord_dir, labeled_dir
         error('Input images must be stored as RGB or grayscale')
 
 
-    # NEED TO DEBUG!!!!!!!!!
     # Adding labeled data
     with TFRecordExporter(labeled_tfrecord_dir, len(labels)) as tfr:
         order = tfr.choose_shuffled_order() if shuffle else np.arange(len(labels))
-        #  Iterate through each class
-        for i in range(Num_classes):
-            # Go over each image in the class
-            for idx in range(len(labeled_filenames[i])):
-                img = np.asarray(PIL.Image.open(labeled_filenames[i][order[idx]]))
-                if channels == 1:
-                    img = img[np.newaxis, :, :]  # HW => CHW
-                else:
-                    img = img.transpose(2, 0, 1)  # HWC => CHW
-                tfr.add_image(img)
+
+        # Go over the number of images
+        for idx in range(len(labels)):
+            # Kind-of confusing but this is necessary due to the multi-class labeled data
+            # labeled_filenames = [[cat1, cat2, cat3], [dog1, dog2, dog3]] since it is a double
+            # array and the shuffling is a single array [4, 5, 2, 0, 1, 3] the code below finds which
+            # index for the class (class_indx) and which index for the sample within the class (tmp_indx)
+            # I did it this way so the amount of samples within each class can be arbitrary as well as the number
+            # of classes overall.
+            class_indx = 0
+            tmp_indx = order[idx] # lets say tmp_indx is 4 in our example
+            # Checks to see if 4 > 2
+            while tmp_indx > len(labeled_filenames[class_indx])-1:
+                # tmp_indx = 4 - 3
+                tmp_indx-=len(labeled_filenames[class_indx])
+                # we check the next class
+                class_indx+=1
+                # class_indx = 0; tmp_indx = 1 which gives us the 4th index
+
+            img = np.asarray(PIL.Image.open(labeled_filenames[class_indx][tmp_indx]))
+            if channels == 1:
+                img = img[np.newaxis, :, :]  # HW => CHW
+            else:
+                img = img.transpose(2, 0, 1)  # HWC => CHW
+            tfr.add_image(img)
+        # Dont need to do anything fancy here since onehot is a numpy array
         tfr.add_labels(onehot[order])
 
     print()
@@ -399,12 +414,13 @@ if __name__ == "__main__":
         os.mkdir("Labeled")
     if not os.path.isdir("Unlabeled"):
         os.mkdir("Unlabeled")
-
+    Shuffle = True
     args = sys.argv[1:]
 
-    create_from_images("Labeled", "Unlabeled", args[0] + "/", args[1] + "/", False)
+    create_from_images("Labeled", "Unlabeled", args[0] + "/", args[1] + "/", Shuffle)
 
 # ----------------------------------------------------------------------------
+
 
 
 
