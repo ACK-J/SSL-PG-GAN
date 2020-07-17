@@ -139,6 +139,13 @@ def test_discriminator(D, tensor):
     return (K_logits_out, fake_logit_out, features_out)
 
 
+def fp32(*values):
+    if len(values) == 1 and isinstance(values[0], tuple):
+        values = values[0]
+    values = tuple(tf.cast(v, tf.float32) for v in values)
+    return values if len(values) >= 2 else values[0]
+
+
 #----------------------------------------------------------------------------
 # Main training script.
 # To run, comment/uncomment appropriate lines in config.py and launch train.py.
@@ -231,6 +238,7 @@ def train_progressive_gan(
     if save_weight_histograms:
         G.setup_weight_histograms(); D.setup_weight_histograms()
 
+    print("Start Time: ",datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     print('Training...')
     cur_nimg = int(resume_kimg * TrainingSpeedInt)
     cur_tick = 0
@@ -283,7 +291,6 @@ def train_progressive_gan(
 
             tfutil.autosummary('Timing/total_hours', total_time / (60.0 * 60.0))
             tfutil.autosummary('Timing/total_days', total_time / (24.0 * 60.0 * 60.0))
-            tfutil.save_summaries(summary_log, cur_nimg)
 
              
             #######################
@@ -318,6 +325,8 @@ def train_progressive_gan(
                     tfutil.autosummary('Accuracy/Validation', validation)
                     print("Correct: ", correct, "\n", "Guesses: ", guesses, "\n", "Percent correct: ", validation)
                     print()
+
+            tfutil.save_summaries(summary_log, cur_nimg)
 
 
             # Save snapshots.
