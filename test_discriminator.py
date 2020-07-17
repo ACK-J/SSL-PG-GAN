@@ -11,7 +11,6 @@ import glob
 import config
 import tfutil
 import misc
-from train import process_reals
 import PIL.Image
 
 def fp32(*values):

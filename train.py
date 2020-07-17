@@ -18,6 +18,7 @@ import tfutil
 import dataset
 import misc
 import datetime
+import PIL.Image
 
 TrainingSpeedInt = 1000
 TrainingSpeedFloat = 1000.0
@@ -224,7 +225,7 @@ def train_progressive_gan(
     result_subdir = misc.create_result_subdir(config.result_dir, config.desc)
     misc.save_image_grid(grid_reals, os.path.join(result_subdir, 'reals.png'), drange=training_set.dynamic_range, grid_size=grid_size)
     misc.save_image_grid(grid_fakes, os.path.join(result_subdir, 'fakes%06d.png' % 0), drange=drange_net, grid_size=grid_size)
-    summary_log = tf.summary.FileWriter(result_subdir)
+    summary_log = tf.compat.v1.summary.FileWriter(result_subdir)
     if save_tf_graph:
         summary_log.add_graph(tf.get_default_graph())
     if save_weight_histograms:
@@ -284,6 +285,10 @@ def train_progressive_gan(
             tfutil.autosummary('Timing/total_days', total_time / (24.0 * 60.0 * 60.0))
             tfutil.save_summaries(summary_log, cur_nimg)
 
+             
+            #######################
+            # VALIDATION ACCURACY #
+            #######################
 
             # example ndim = 512 for an image that is 512x512 pixels
             # All images for SSL-PGGAN must be square

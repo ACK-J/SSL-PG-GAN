@@ -1,6 +1,7 @@
 config.py
-__pycache__/
-CatVDog/
-Labeled/
-Unlabeled/
-results/
+__pycache__/*
+CatVDog/*
+Labeled/*
+Unlabeled/*
+results/*
+*.txt
