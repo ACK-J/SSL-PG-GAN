@@ -32,8 +32,9 @@ Once complete open a new terminal so the changes take effect.
 
 `git clone https://github.com/ACK-J/SSL-PG-GAN.git`
 
-Open up the file `environment.yml` in any text editor you want. Go all the way to the bottom of the file and you should see the line `prefix: /home/USERNAME/anaconda3/envs/ssl-pggan` Please change where it
-says `USERNAME` to be your current username. Once that's done save and quit.
+Open up the file `environment.yml` in any text editor you want. Go all the way to the bottom of the file and you should see the line `prefix: /home/USERNAME/anaconda3/envs/ssl-pggan` Please change where it says `USERNAME` to be your current username. 
+
+Once that's done save and quit.
 
 Next, run the following command to create the environment
 
@@ -84,7 +85,20 @@ The training data folder should look like :
     
 Example Image Size: 3 X 512 X 512
 
-To create the cat/dogs dataset run the following command
+### How to resize the images you already have?
+Most likely your dataset of images will not be 256x256 or 512x512 or 1024x1024 etc... but I made an easy one-liner where you can resize an entire directory full of images!
+`find <path to img folder> -iname '*.jpg' -exec convert \{} -verbose -resize 256x256! \{} \;`
+- Find is a command that will list all of the contents of the directory you give it
+- `-iname` says look for files and be case-insensitive. Next is give `*.jpg` look for all files with a jpg extension
+   - If you are not using jpg files change the extension
+- The `-exec` says pass all of the files you found to the following command
+- The command resizes the images to be exactly 256x256 pixels and if they are smaller it stretches them until they are
+   - If you do not want your pictures to be 256x256 then change it and make sure to leave the `!` where it is
+   - The `\{}` is where the file names that the find command gets are placed.
+**NOTE:This command will overwrite the files when it converts them to be the fixed size**
+
+To create the cat/dogs dataset (Or any dataset of images) run the following command...
+
 `python3 dataset_tool.py <Labeled dir> <Unlabeled dir> 2> /dev/null`
 - Make sure to use full paths for both Labeled and Unlabeled datasets.
 - The reason that I send stderr to /dev/null is because the version of tensorflow has very noisy deprecation warnings which are annoying. 
@@ -92,7 +106,9 @@ To create the cat/dogs dataset run the following command
 
 # Configuration
 Edit `config.py` to see all of the options available. 
+
 You must change two lines in the configuration file before training the model. 
+
 They are both commented with `# CHANGE ME` and are the paths to the parent directory of the labeled and unlabeled data folders. This should normally just be the path to the 
 SSL-PG-GAN folder.
 
