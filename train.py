@@ -342,7 +342,7 @@ def train_progressive_gan(
                     print("Correct: ", correct, "\n", "Guesses: ", guesses, "\n", "Percent correct: ", validation)
                     print()
 
-            tfutil.autosummary('Accuracy/Validation', (correct/guessses))
+            tfutil.autosummary('Accuracy/Validation', (correct/guesses))
             tfutil.save_summaries(summary_log, cur_nimg)
 
 
