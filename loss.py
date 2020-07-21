@@ -81,11 +81,16 @@ def D_wgangp_acgan(G, D, opt, training_set, minibatch_size, reals, labels, unlab
     #l_lab = output_before_softmax_lab[tf.range(minibatch_size), simple_labels]
     #loss_lab = -tf.math.reduce_mean(l_lab) + tf.math.reduce_mean(z_exp_lab)
 
-    # labeled sample loss is equivalent to cross entropy w/ softmax (I think?)
-    # loss_lab = tf.math.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=output_before_softmax_lab))
+    train_err = tf.math.reduce_mean(tf.cast(tf.math.not_equal(tf.math.argmax(output_before_softmax_lab, axis=1),
+                                                              tf.math.argmax(labels, axis=1)), tf.float32))
+    train_err = tfutil.autosummary('Loss/D_train_err', train_err)
 
-    l_lab = tf.gather(output_before_softmax_lab, tf.range(minibatch_size),labels)
-    loss_lab = -tf.math.reduce_sum(l_lab) + tf.math.reduce_sum(tf.math.reduce_sum(tf.math.reduce_logsumexp(output_before_softmax_lab)))
+    # labeled sample loss is equivalent to cross entropy w/ softmax (I think?)
+    loss_lab = tf.math.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(labels=labels, logits=output_before_softmax_lab))
+
+    # Another implementation of Salimans code ported to TF (NOT WORKING the tf.gather is wrong)
+    #l_lab = tf.gather(output_before_softmax_lab, tf.range(minibatch_size),labels)
+    #loss_lab = -tf.math.reduce_sum(l_lab) + tf.math.reduce_sum(tf.math.reduce_sum(tf.math.reduce_logsumexp(output_before_softmax_lab)))
 
     # Direct port of unlabeled loss and fake loss. from Tim Salimans et al. https://arxiv.org/pdf/1606.03498.pdf
     # Code reference https://github.com/openai/improved-gan/blob/master/mnist_svhn_cifar10/train_cifar_feature_matching.py#L87

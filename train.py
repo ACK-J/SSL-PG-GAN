@@ -275,6 +275,8 @@ def train_progressive_gan(
             for _ in range(D_repeats):
                 tfutil.run([D_train_op, Gs_update_op], {lod_in: sched.lod, lrate_in: sched.D_lrate, minibatch_in: sched.minibatch})
                 cur_nimg += sched.minibatch
+                tmp = min(tick_start_nimg + sched.tick_kimg * TrainingSpeedInt, total_kimg * TrainingSpeedInt)
+                print("Tick progress:  {}/{}".format(cur_nimg, tmp), end="\r", flush=True)
             tfutil.run([G_train_op], {lod_in: sched.lod, lrate_in: sched.G_lrate, minibatch_in: sched.minibatch})
 
         # Perform maintenance tasks once per tick.
