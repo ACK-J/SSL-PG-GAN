@@ -117,6 +117,10 @@ have to restart the training.
 - Do not just copy and paste. Replace the `results/000-ssl-pgan-sslpggan-preset-v2-4gpus-fp32/` with the results directory you want to view.
 - Once tensorboard boots up it will give you a URL to go to an address such as... `TensorBoard 1.14.0 at http://192.168.10.5:8888/ (Press CTRL+C to quit)`
  - Your IP-address will be different
+ ### Alternatively, you could host it on tensorboard.dev so you can access it from anywhere instead of just locally.
+ `pip install -U tensorboard`
+ 
+ `tensorboard dev upload --logdir results/000-ssl-pgan-sslpggan-preset-v2-4gpus-fp32/ --name "SSL-PG-GAN" --description "First run!"`
 
 # Testing
  ` python3 test_discriminator.py <FULL path to out of sample images> <id of training round> <pixels> <OPTIONAL: index of correct class>`
