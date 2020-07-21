@@ -87,6 +87,7 @@ Example Image Size: 3 X 512 X 512
 
 ### How to resize the images you already have?
 Most likely your dataset of images will not be 256x256 or 512x512 or 1024x1024 etc... but I made an easy one-liner where you can resize an entire directory full of images!
+
 `find <path to img folder> -iname '*.jpg' -exec convert \{} -verbose -resize 256x256! \{} \;`
 - Find is a command that will list all of the contents of the directory you give it
 - `-iname` says look for files and be case-insensitive. Next is give `*.jpg` look for all files with a jpg extension
