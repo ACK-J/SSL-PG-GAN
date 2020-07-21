@@ -192,34 +192,44 @@ def train_progressive_gan(
 
     print('Building TensorFlow graph...')
     with tf.name_scope('Inputs'):
-        lod_in          = tf.placeholder(tf.float32, name='lod_in', shape=[])
-        lrate_in        = tf.placeholder(tf.float32, name='lrate_in', shape=[])
-        minibatch_in    = tf.placeholder(tf.int32, name='minibatch_in', shape=[])
-        minibatch_split = minibatch_in // config.num_gpus
-        reals, labels   = training_set.get_minibatch_tf()
-        unlabeled_reals, _ = unlabeled_training_set.get_minibatch_tf()
-        reals_split     = tf.split(reals, config.num_gpus)
-        unlabeled_reals_split = tf.split(unlabeled_reals, config.num_gpus)
-        labels_split    = tf.split(labels, config.num_gpus)
+        lod_in          		= tf.placeholder(tf.float32, name='lod_in', shape=[])
+        lrate_in        		= tf.placeholder(tf.float32, name='lrate_in', shape=[])
+        minibatch_in    		= tf.placeholder(tf.int32, name='minibatch_in', shape=[])
+
+        minibatch_split 		= minibatch_in // config.num_gpus
+        reals, labels  	 		= training_set.get_minibatch_tf()
+        unlabeled_reals, _ 		= unlabeled_training_set.get_minibatch_tf()
+
+        reals_split     		= tf.split(reals, config.num_gpus)
+        unlabeled_reals_split 	= tf.split(unlabeled_reals, config.num_gpus)
+
+        labels_split    		= tf.split(labels, config.num_gpus)
+
     G_opt = tfutil.Optimizer(name='TrainG', learning_rate=lrate_in, **config.G_opt)
     D_opt = tfutil.Optimizer(name='TrainD', learning_rate=lrate_in, **config.D_opt)
     print("CUDA_VISIBLE_DEVICES: ", os.environ['CUDA_VISIBLE_DEVICES'])
+
     for gpu in range(config.num_gpus):
         with tf.name_scope('GPU%d' % gpu), tf.device('/gpu:%d' % gpu):
             G_gpu = G if gpu == 0 else G.clone(G.name + '_shadow')
             D_gpu = D if gpu == 0 else D.clone(D.name + '_shadow')
+
             lod_assign_ops = [tf.assign(G_gpu.find_var('lod'), lod_in), tf.assign(D_gpu.find_var('lod'), lod_in)]
+
             reals_gpu = process_reals(reals_split[gpu], lod_in, mirror_augment, training_set.dynamic_range, drange_net)
-            unlabeled_reals_gpu = process_reals(unlabeled_reals_split[gpu], lod_in, mirror_augment, training_set.dynamic_range, drange_net)
+            unlabeled_reals_gpu = process_reals(unlabeled_reals_split[gpu], lod_in, mirror_augment, unlabeled_training_set.dynamic_range, drange_net)
+
             labels_gpu = labels_split[gpu]
             with tf.name_scope('G_loss'), tf.control_dependencies(lod_assign_ops):
                 G_loss = tfutil.call_func_by_name(G=G_gpu, D=D_gpu, opt=G_opt, training_set=training_set, minibatch_size=minibatch_split, unlabeled_reals=unlabeled_reals_gpu, **config.G_loss)
+
             with tf.name_scope('D_loss'), tf.control_dependencies(lod_assign_ops):
                 D_loss = tfutil.call_func_by_name(G=G_gpu, D=D_gpu, opt=D_opt, training_set=training_set, minibatch_size=minibatch_split, reals=reals_gpu, labels=labels_gpu, unlabeled_reals=unlabeled_reals_gpu, **config.D_loss)
 
             G_opt.register_gradients(tf.reduce_mean(G_loss), G_gpu.trainables)
             D_opt.register_gradients(tf.reduce_mean(D_loss), D_gpu.trainables)
             print('GPU %d loaded!' % gpu)
+
     G_train_op = G_opt.apply_updates()
     D_train_op = D_opt.apply_updates()
 
@@ -246,6 +256,8 @@ def train_progressive_gan(
     tick_start_time = time.time()
     train_start_time = tick_start_time - resume_time
     prev_lod = -1.0
+
+
     while cur_nimg < total_kimg * TrainingSpeedInt:
 
         # Choose training parameters and configure training ops.
@@ -302,9 +314,11 @@ def train_progressive_gan(
             ndim = 512
             correct=0
             guesses=0
+
             validation_dog = '/home/jack/WORKHERE/SSL-PG-GAN/CatVDog/PetImages/validation_dog/'
             validation_cat = '/home/jack/WORKHERE/SSL-PG-GAN/CatVDog/PetImages/validation_cat/'
             dir_tuple = (validation_dog, validation_cat)
+            # For each class
             for indx, directory in enumerate(dir_tuple):
                 # Go through every image that needs to be tested
                 for filename in os.listdir(directory):
@@ -314,7 +328,8 @@ def train_progressive_gan(
                     img = np.asarray(PIL.Image.open(directory + filename)).reshape(3,ndim,ndim)
                     img = np.expand_dims(img, axis=0) # makes the image (1,3,512,512)
                     K_logits_out, fake_logit_out, features_out = test_discriminator(D, img)
-
+                    
+                    print(K_logits_out.eval())
                     sample_probs = tf.nn.softmax(K_logits_out)
                     print("Softmax output", sample_probs.eval())
                     label = np.argmax(sample_probs.eval()[0], axis=0)
@@ -322,10 +337,10 @@ def train_progressive_gan(
                         correct += 1
                     print("LABEL: ",label)
                     validation = (correct/guesses)
-                    tfutil.autosummary('Accuracy/Validation', validation)
                     print("Correct: ", correct, "\n", "Guesses: ", guesses, "\n", "Percent correct: ", validation)
                     print()
 
+            tfutil.autosummary('Accuracy/Validation', (correct/guessses))
             tfutil.save_summaries(summary_log, cur_nimg)
 
 
