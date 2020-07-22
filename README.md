@@ -51,6 +51,7 @@ Now you are in an environment with everything you need to run SSL-PGGAN
 
 You should have a dataset in mind that you want to use but if you don't I am providing the one I used to test
 below so you can follow along and get something running 
+- These images are already resized to 256x256 and are in the correct file structure
 
 https://drive.google.com/file/d/13OHIv7A_AFbKWe_URwbyOvEKRnPovrAq/view?usp=sharing
 
@@ -83,7 +84,7 @@ The training data folder should look like :
     2. Image resolution must be a power-of-two
     3. Image must be either grayscale or RGB
     
-Example Image Size: 3 X 512 X 512
+Example Image Size: 3 X 256 X 256
 
 ### How to resize the images you already have?
 Most likely your dataset of images will not be 256x256 or 512x512 or 1024x1024 etc... but I made an easy one-liner where you can resize an entire directory full of images!
@@ -148,7 +149,7 @@ have to restart the training.
 # Testing
  ` python3 test_discriminator.py <FULL path to out of sample images> <id of training round> <pixels> <OPTIONAL: index of correct class>`
  
- `python3 test_discriminator.py /home/user/OutOfSample/Images/ 2 512 1`
+ `python3 test_discriminator.py /home/user/OutOfSample/Images/ 2 256 1`
 - You can find the training round by going to `results/` directory. The number at the beginning of each directory identifies each training session. Make sure to use the entire 3 digit number ex) 000 or 001 etc...
 - Make sure `export CUDA_VISIBLE_DEVICES=` is set to an open GPU
 
