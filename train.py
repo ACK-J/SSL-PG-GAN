@@ -313,7 +313,7 @@ def train_progressive_gan(
 
             # example ndim = 512 for an image that is 512x512 pixels
             # All images for SSL-PGGAN must be square
-            ndim = 512
+            ndim = 256
             correct=0
             guesses=0
 
@@ -331,15 +331,17 @@ def train_progressive_gan(
                     img = np.expand_dims(img, axis=0) # makes the image (1,3,512,512)
                     K_logits_out, fake_logit_out, features_out = test_discriminator(D, img)
                     
-                    print(K_logits_out.eval())
+                    print("K Logits Out:",K_logits_out.eval())
                     sample_probs = tf.nn.softmax(K_logits_out)
-                    print("Softmax output", sample_probs.eval())
+                    print("Softmax Output:", sample_probs.eval())
                     label = np.argmax(sample_probs.eval()[0], axis=0)
                     if label == indx:
                         correct += 1
-                    print("LABEL: ",label)
+                    print("-----------------------------------")
+                    print("GUESSED LABEL: ",label)
+                    print("CORRECT LABEL: ",indx)
                     validation = (correct/guesses)
-                    print("Correct: ", correct, "\n", "Guesses: ", guesses, "\n", "Percent correct: ", validation)
+                    print("Total Correct: ", correct, "\n", "Total Guesses: ", guesses, "\n", "Percent correct: ", validation)
                     print()
 
             tfutil.autosummary('Accuracy/Validation', (correct/guesses))
