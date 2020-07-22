@@ -105,7 +105,7 @@ def D_wgangp_acgan(G, D, opt, training_set, minibatch_size, reals, labels, unlab
     loss_fake = tfutil.autosummary('Loss/D_loss_fake', loss_fake)
 
     # combine losses
-    loss = loss_lab + loss_unl + loss_fake
+    loss = loss_lab + loss_unl + loss_fake + (train_err*0)
 
     loss = tfutil.autosummary('Loss/D_combined_loss', loss)
 
