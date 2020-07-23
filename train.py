@@ -340,7 +340,7 @@ def train_progressive_gan(
                     if label == indx:
                         correct += 1
                     else:
-                        a[indx][0] += 1
+                        FP_RATE[indx][0] += 1
                     print("-----------------------------------")
                     print("GUESSED LABEL: ",label)
                     print("CORRECT LABEL: ",indx)
