@@ -275,8 +275,8 @@ def train_progressive_gan(
             for _ in range(D_repeats):
                 tfutil.run([D_train_op, Gs_update_op], {lod_in: sched.lod, lrate_in: sched.D_lrate, minibatch_in: sched.minibatch})
                 cur_nimg += sched.minibatch
-                tmp = min(tick_start_nimg + sched.tick_kimg * TrainingSpeedInt, total_kimg * TrainingSpeedInt)
-                print("Tick progress:  {}/{}".format(cur_nimg, tmp), end="\r", flush=True)
+                #tmp = min(tick_start_nimg + sched.tick_kimg * TrainingSpeedInt, total_kimg * TrainingSpeedInt)
+                #print("Tick progress:  {}/{}".format(cur_nimg, tmp), end="\r", flush=True)
             tfutil.run([G_train_op], {lod_in: sched.lod, lrate_in: sched.G_lrate, minibatch_in: sched.minibatch})
 
         # Perform maintenance tasks once per tick.
@@ -320,6 +320,8 @@ def train_progressive_gan(
             validation_dog = '/home/jack/WORKHERE/SSL-PG-GAN/CatVDog/PetImages/validation_dog/'
             validation_cat = '/home/jack/WORKHERE/SSL-PG-GAN/CatVDog/PetImages/validation_cat/'
             dir_tuple = (validation_dog, validation_cat)
+            # If guessed the wrong class seeing if there is a bias
+            FP_RATE=[[0],[0]]
             # For each class
             for indx, directory in enumerate(dir_tuple):
                 # Go through every image that needs to be tested
@@ -331,17 +333,20 @@ def train_progressive_gan(
                     img = np.expand_dims(img, axis=0) # makes the image (1,3,512,512)
                     K_logits_out, fake_logit_out, features_out = test_discriminator(D, img)
                     
-                    print("K Logits Out:",K_logits_out.eval())
+                    #print("K Logits Out:",K_logits_out.eval())
                     sample_probs = tf.nn.softmax(K_logits_out)
-                    print("Softmax Output:", sample_probs.eval())
+                    #print("Softmax Output:", sample_probs.eval())
                     label = np.argmax(sample_probs.eval()[0], axis=0)
                     if label == indx:
                         correct += 1
+                    else:
+                        a[indx][0] += 1
                     print("-----------------------------------")
                     print("GUESSED LABEL: ",label)
                     print("CORRECT LABEL: ",indx)
                     validation = (correct/guesses)
                     print("Total Correct: ", correct, "\n", "Total Guesses: ", guesses, "\n", "Percent correct: ", validation)
+                    print("False Positives: Dog, Cat",FP_RATE)
                     print()
 
             tfutil.autosummary('Accuracy/Validation', (correct/guesses))
