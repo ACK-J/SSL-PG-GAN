@@ -54,6 +54,22 @@ def G_wgan_acgan(G, D, opt, training_set, minibatch_size, unlabeled_reals,
     # loss = tfutil.autosummary('Loss/G_feat_match_loss_post_LabelPenalty', loss)
     return loss
 
+
+def G_pggan_loss(G, D, opt, training_set, minibatch_size,
+    cond_weight = 1.0): # Weight of the conditioning term.
+
+    latents = tf.random_normal([minibatch_size] + G.input_shapes[0][1:])
+    labels = training_set.get_random_labels_tf(minibatch_size)
+    fake_images_out = G.get_output_for(latents, labels, is_training=True)
+    fake_labels_out, fake_scores_out, _ = fp32(D.get_output_for(fake_images_out, is_training=True))
+    loss = -fake_scores_out
+
+    if D.output_shapes[1][1] > 0:
+        with tf.name_scope('LabelPenalty'):
+            label_penalty_fakes = tf.nn.softmax_cross_entropy_with_logits_v2(labels=labels, logits=fake_labels_out)
+        loss += label_penalty_fakes * cond_weight
+    return loss
+
 #----------------------------------------------------------------------------
 # Discriminator loss function used in the paper (WGAN-GP + AC-GAN).
 
