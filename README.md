@@ -9,7 +9,7 @@ My research incorporates semi-supervised learning alongside progressively growin
 
 
 # Installation 
-Go to to get the latest version of anaconda for Python3 
+Go here to get the latest version of anaconda for Python3 
 it should download a shell script
 
 https://www.anaconda.com/products/individual#linux
