@@ -158,8 +158,8 @@ def D_pggan_loss(G, D, opt, training_set, minibatch_size, unlabeled_reals,
     latents = tf.random_normal([minibatch_size] + G.input_shapes[0][1:])
     labels = training_set.get_random_labels_tf(minibatch_size)
     fake_images_out = G.get_output_for(latents, labels, is_training=True)
-    real_scores_out, real_labels_out = fp32(D.get_output_for(unlabeled_reals, is_training=True))
-    fake_scores_out, fake_labels_out = fp32(D.get_output_for(fake_images_out, is_training=True))
+    real_labels_out, real_scores_out, _ = fp32(D.get_output_for(unlabeled_reals, is_training=True))
+    fake_labels_out, fake_scores_out, _ = fp32(D.get_output_for(fake_images_out, is_training=True))
     real_scores_out = tfutil.autosummary('Loss/real_scores', real_scores_out)
     fake_scores_out = tfutil.autosummary('Loss/fake_scores', fake_scores_out)
     loss = fake_scores_out - real_scores_out
@@ -167,7 +167,7 @@ def D_pggan_loss(G, D, opt, training_set, minibatch_size, unlabeled_reals,
     with tf.name_scope('GradientPenalty'):
         mixing_factors = tf.random_uniform([minibatch_size, 1, 1, 1], 0.0, 1.0, dtype=fake_images_out.dtype)
         mixed_images_out = tfutil.lerp(tf.cast(unlabeled_reals, fake_images_out.dtype), fake_images_out, mixing_factors)
-        mixed_scores_out, mixed_labels_out = fp32(D.get_output_for(mixed_images_out, is_training=True))
+        mixed_labels_out, mixed_scores_out, _ = fp32(D.get_output_for(mixed_images_out, is_training=True))
         mixed_scores_out = tfutil.autosummary('Loss/mixed_scores', mixed_scores_out)
         mixed_loss = opt.apply_loss_scaling(tf.reduce_sum(mixed_scores_out))
         mixed_grads = opt.undo_loss_scaling(fp32(tf.gradients(mixed_loss, [mixed_images_out])[0]))

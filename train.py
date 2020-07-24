@@ -229,7 +229,7 @@ def train_progressive_gan(
 
             with tf.name_scope('D_loss'), tf.control_dependencies(lod_assign_ops):
                 D_loss = tfutil.call_func_by_name(G=G_gpu, D=D_gpu, opt=D_opt, training_set=training_set, minibatch_size=minibatch_split, reals=reals_gpu, labels=labels_gpu, unlabeled_reals=unlabeled_reals_gpu, **config.D_loss)
-                D_loss_pggan = tfutil.call_func_by_name(G=G_gpu, D=D_gpu, opt=D_opt, training_set=training_set, minibatch_size=minibatch_split, reals=unlabeled_reals_gpu, **config.D_loss)
+                D_loss_pggan = tfutil.call_func_by_name(G=G_gpu, D=D_gpu, opt=D_opt, training_set=training_set, minibatch_size=minibatch_split, unlabeled_reals=unlabeled_reals_gpu, **config.D_loss_pggan)
             G_opt.register_gradients(tf.reduce_mean(G_loss), G_gpu.trainables)
             G_opt_pggan.register_gradients(tf.reduce_mean(G_loss_pggan), G_gpu.trainables)
             D_opt_pggan.register_gradients(tf.reduce_mean(D_loss_pggan), D_gpu.trainables)
