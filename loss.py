@@ -160,24 +160,24 @@ def D_pggan_loss(G, D, opt, training_set, minibatch_size, unlabeled_reals,
     fake_images_out = G.get_output_for(latents, labels, is_training=True)
     real_labels_out, real_scores_out, _ = fp32(D.get_output_for(unlabeled_reals, is_training=True))
     fake_labels_out, fake_scores_out, _ = fp32(D.get_output_for(fake_images_out, is_training=True))
-    real_scores_out = tfutil.autosummary('Loss/real_scores', real_scores_out)
-    fake_scores_out = tfutil.autosummary('Loss/fake_scores', fake_scores_out)
+    real_scores_out = tfutil.autosummary('Loss/D_pggan_real_scores', real_scores_out)
+    fake_scores_out = tfutil.autosummary('Loss/D_pggan_fake_scores', fake_scores_out)
     loss = fake_scores_out - real_scores_out
 
     with tf.name_scope('GradientPenalty'):
         mixing_factors = tf.random_uniform([minibatch_size, 1, 1, 1], 0.0, 1.0, dtype=fake_images_out.dtype)
         mixed_images_out = tfutil.lerp(tf.cast(unlabeled_reals, fake_images_out.dtype), fake_images_out, mixing_factors)
         mixed_labels_out, mixed_scores_out, _ = fp32(D.get_output_for(mixed_images_out, is_training=True))
-        mixed_scores_out = tfutil.autosummary('Loss/mixed_scores', mixed_scores_out)
+        mixed_scores_out = tfutil.autosummary('Loss/D_pggan_mixed_scores', mixed_scores_out)
         mixed_loss = opt.apply_loss_scaling(tf.reduce_sum(mixed_scores_out))
         mixed_grads = opt.undo_loss_scaling(fp32(tf.gradients(mixed_loss, [mixed_images_out])[0]))
         mixed_norms = tf.sqrt(tf.reduce_sum(tf.square(mixed_grads), axis=[1,2,3]))
-        mixed_norms = tfutil.autosummary('Loss/mixed_norms', mixed_norms)
+        mixed_norms = tfutil.autosummary('Loss/D_pggan_mixed_norms', mixed_norms)
         gradient_penalty = tf.square(mixed_norms - wgan_target)
     loss += gradient_penalty * (wgan_lambda / (wgan_target**2))
 
     with tf.name_scope('EpsilonPenalty'):
-        epsilon_penalty = tfutil.autosummary('Loss/epsilon_penalty', tf.square(real_scores_out))
+        epsilon_penalty = tfutil.autosummary('Loss/D_pggan_epsilon_penalty', tf.square(real_scores_out))
     loss += epsilon_penalty * wgan_epsilon
     return loss
 

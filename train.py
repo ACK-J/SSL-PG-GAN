@@ -225,10 +225,12 @@ def train_progressive_gan(
             labels_gpu = labels_split[gpu]
             with tf.name_scope('G_loss'), tf.control_dependencies(lod_assign_ops):
                 G_loss = tfutil.call_func_by_name(G=G_gpu, D=D_gpu, opt=G_opt, training_set=training_set, minibatch_size=minibatch_split, unlabeled_reals=unlabeled_reals_gpu, **config.G_loss)
+            with tf.name_scope('G_loss_pggan'), tf.control_dependencies(lod_assign_ops):
                 G_loss_pggan = tfutil.call_func_by_name(G=G_gpu, D=D_gpu, opt=G_opt, training_set=training_set, minibatch_size=minibatch_split, **config.G_loss_pggan)
 
             with tf.name_scope('D_loss'), tf.control_dependencies(lod_assign_ops):
                 D_loss = tfutil.call_func_by_name(G=G_gpu, D=D_gpu, opt=D_opt, training_set=training_set, minibatch_size=minibatch_split, reals=reals_gpu, labels=labels_gpu, unlabeled_reals=unlabeled_reals_gpu, **config.D_loss)
+            with tf.name_scope('D_loss_pggan'), tf.control_dependencies(lod_assign_ops):
                 D_loss_pggan = tfutil.call_func_by_name(G=G_gpu, D=D_gpu, opt=D_opt, training_set=training_set, minibatch_size=minibatch_split, unlabeled_reals=unlabeled_reals_gpu, **config.D_loss_pggan)
             G_opt.register_gradients(tf.reduce_mean(G_loss), G_gpu.trainables)
             G_opt_pggan.register_gradients(tf.reduce_mean(G_loss_pggan), G_gpu.trainables)
@@ -237,8 +239,8 @@ def train_progressive_gan(
             print('GPU %d loaded!' % gpu)
 
     G_train_op = G_opt.apply_updates()
-    G_train_opt_pggan = G_opt_pggan.apply_updates()
-    D_train_opt_pggan = D_opt_pggan.apply_updates()
+    G_train_op_pggan = G_opt_pggan.apply_updates()
+    D_train_op_pggan = D_opt_pggan.apply_updates()
     D_train_op = D_opt.apply_updates()
 
     print('Setting up snapshot image grid...')
@@ -282,7 +284,7 @@ def train_progressive_gan(
         for repeat in range(minibatch_repeats):
             for _ in range(D_repeats):
                 if sched.lod == 0:
-                    tfutil.run([D_train_opt_pggan, Gs_update_op], {lod_in: sched.lod, lrate_in: sched.D_lrate, minibatch_in: sched.minibatch})
+                    tfutil.run([D_train_op_pggan, Gs_update_op], {lod_in: sched.lod, lrate_in: sched.D_lrate, minibatch_in: sched.minibatch})
                 else:
                     tfutil.run([D_train_op, Gs_update_op], {lod_in: sched.lod, lrate_in: sched.D_lrate, minibatch_in: sched.minibatch})
                     cur_nimg += sched.minibatch
@@ -292,7 +294,7 @@ def train_progressive_gan(
             if sched.lod == 0:
                 tfutil.run([G_train_op], {lod_in: sched.lod, lrate_in: sched.G_lrate, minibatch_in: sched.minibatch})
             else:
-                tfutil.run([G_train_opt_pggan], {lod_in: sched.lod, lrate_in: sched.G_lrate, minibatch_in: sched.minibatch})
+                tfutil.run([G_train_op_pggan], {lod_in: sched.lod, lrate_in: sched.G_lrate, minibatch_in: sched.minibatch})
 
         # Perform maintenance tasks once per tick.
         done = (cur_nimg >= total_kimg * TrainingSpeedInt)
