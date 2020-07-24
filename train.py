@@ -201,7 +201,7 @@ def train_progressive_gan(
         unlabeled_reals, _              = unlabeled_training_set.get_minibatch_tf()
 
         reals_split                     = tf.split(reals, config.num_gpus)
-        unlabeled_reals_split   = tf.split(unlabeled_reals, config.num_gpus)
+        unlabeled_reals_split           = tf.split(unlabeled_reals, config.num_gpus)
 
         labels_split                    = tf.split(labels, config.num_gpus)
 
@@ -278,16 +278,18 @@ def train_progressive_gan(
         if reset_opt_for_new_lod:
             if np.floor(sched.lod) != np.floor(prev_lod) or np.ceil(sched.lod) != np.ceil(prev_lod):
                 G_opt.reset_optimizer_state(); D_opt.reset_optimizer_state()
+                G_opt_pggan.reset_optimizer_state(); D_opt_pggan.reset_optimizer_state()
         prev_lod = sched.lod
 
         # Run training ops.
         for repeat in range(minibatch_repeats):
             for _ in range(D_repeats):
+                # Run the Pggan loss if lod != 0 else run SSL loss with feature matching
                 if sched.lod == 0:
-                    tfutil.run([D_train_op_pggan, Gs_update_op], {lod_in: sched.lod, lrate_in: sched.D_lrate, minibatch_in: sched.minibatch})
-                else:
                     tfutil.run([D_train_op, Gs_update_op], {lod_in: sched.lod, lrate_in: sched.D_lrate, minibatch_in: sched.minibatch})
-                    cur_nimg += sched.minibatch
+                else:
+                    tfutil.run([D_train_op_pggan, Gs_update_op], {lod_in: sched.lod, lrate_in: sched.D_lrate, minibatch_in: sched.minibatch})
+                cur_nimg += sched.minibatch
                 #tmp = min(tick_start_nimg + sched.tick_kimg * TrainingSpeedInt, total_kimg * TrainingSpeedInt)
                 #print("Tick progress:  {}/{}".format(cur_nimg, tmp), end="\r", flush=True)
             # Run the Pggan loss if lod != 0 else run SSL loss with feature matching
