@@ -207,6 +207,7 @@ def train_progressive_gan(
 
     G_opt = tfutil.Optimizer(name='TrainG', learning_rate=lrate_in, **config.G_opt)
     G_opt_pggan = tfutil.Optimizer(name='TrainG_pggan', learning_rate=lrate_in, **config.G_opt)
+    D_opt_pggan = tfutil.Optimizer(name='TrainD_pggan', learning_rate=lrate_in, **config.D_opt)
     D_opt = tfutil.Optimizer(name='TrainD', learning_rate=lrate_in, **config.D_opt)
 
     print("CUDA_VISIBLE_DEVICES: ", os.environ['CUDA_VISIBLE_DEVICES'])
@@ -228,14 +229,16 @@ def train_progressive_gan(
 
             with tf.name_scope('D_loss'), tf.control_dependencies(lod_assign_ops):
                 D_loss = tfutil.call_func_by_name(G=G_gpu, D=D_gpu, opt=D_opt, training_set=training_set, minibatch_size=minibatch_split, reals=reals_gpu, labels=labels_gpu, unlabeled_reals=unlabeled_reals_gpu, **config.D_loss)
-
+                D_loss_pggan = tfutil.call_func_by_name(G=G_gpu, D=D_gpu, opt=D_opt, training_set=training_set, minibatch_size=minibatch_split, reals=unlabeled_reals_gpu, **config.D_loss)
             G_opt.register_gradients(tf.reduce_mean(G_loss), G_gpu.trainables)
             G_opt_pggan.register_gradients(tf.reduce_mean(G_loss_pggan), G_gpu.trainables)
+            D_opt_pggan.register_gradients(tf.reduce_mean(D_loss_pggan), D_gpu.trainables)
             D_opt.register_gradients(tf.reduce_mean(D_loss), D_gpu.trainables)
             print('GPU %d loaded!' % gpu)
 
     G_train_op = G_opt.apply_updates()
     G_train_opt_pggan = G_opt_pggan.apply_updates()
+    D_train_opt_pggan = D_opt_pggan.apply_updates()
     D_train_op = D_opt.apply_updates()
 
     print('Setting up snapshot image grid...')
@@ -278,8 +281,11 @@ def train_progressive_gan(
         # Run training ops.
         for repeat in range(minibatch_repeats):
             for _ in range(D_repeats):
-                tfutil.run([D_train_op, Gs_update_op], {lod_in: sched.lod, lrate_in: sched.D_lrate, minibatch_in: sched.minibatch})
-                cur_nimg += sched.minibatch
+                if sched.lod == 0:
+                    tfutil.run([D_train_opt_pggan, Gs_update_op], {lod_in: sched.lod, lrate_in: sched.D_lrate, minibatch_in: sched.minibatch})
+                else:
+                    tfutil.run([D_train_op, Gs_update_op], {lod_in: sched.lod, lrate_in: sched.D_lrate, minibatch_in: sched.minibatch})
+                    cur_nimg += sched.minibatch
                 #tmp = min(tick_start_nimg + sched.tick_kimg * TrainingSpeedInt, total_kimg * TrainingSpeedInt)
                 #print("Tick progress:  {}/{}".format(cur_nimg, tmp), end="\r", flush=True)
             # Run the Pggan loss if lod != 0 else run SSL loss with feature matching
