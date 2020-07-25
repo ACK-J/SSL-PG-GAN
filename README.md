@@ -1,5 +1,6 @@
 # SSL-PG-GAN
 ### A Semi-Supervised Progressively Growing Generative Adversarial Network
+⚠THIS REPOSITORY IS UNDER ACTIVE DEVELOPMENT⚠
 
 This project builds mainly off of the code presented in [Progressive Growing of GAN's for Improved Quality, Stability and Variation](https://arxiv.org/pdf/1710.10196.pdf)
  by Kerras et al. ICLR 2018. Inspiration also came from OpenAI's [Improved Techniques for Training GANs](https://arxiv.org/pdf/1606.03498.pdf) which details semi-supervised implementations of GANs.
