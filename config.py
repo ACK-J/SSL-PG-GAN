@@ -54,7 +54,7 @@ grid        = EasyDict(size='1080p', layout='random')       # Options for train.
 desc += '-sslpggan';            dataset = EasyDict(tfrecord_dir='Labeled'); unlabeled_dataset = EasyDict(tfrecord_dir='Unlabeled')
 
 # Conditioning & snapshot options.
-#desc += '-cond'; dataset.max_label_size = 'full' # conditioned on full label
+desc += '-cond'; dataset.max_label_size = 'full' # conditioned on full label
 #desc += '-cond1'; dataset.max_label_size = 1 # conditioned on first component of the label
 #desc += '-g4k'; grid.size = '4k'
 #desc += '-grpc'; grid.layout = 'row_per_class'

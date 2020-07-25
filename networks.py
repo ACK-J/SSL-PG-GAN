@@ -325,7 +325,7 @@ def D_paper(
 
     features_out = tf.identity(features_out, name='features_out')
     fake_logit_out = tf.identity(combo_out[:, :1], name='fake_logit_out')
-    K_logits_out = tf.identity(combo_out[:, 1:], name='K_logits_out') #Note, labels_out is just logit for fakes
+    K_logits_out = tf.identity(combo_out[:, 1:], name='K_logits_out') 
     return K_logits_out, fake_logit_out, features_out
 
 #----------------------------------------------------------------------------

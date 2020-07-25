@@ -18,6 +18,7 @@ import tfutil
 import dataset
 import misc
 import datetime
+import PIL.Image
 
 TrainingSpeedInt = 1000
 TrainingSpeedFloat = 1000.0
@@ -133,6 +134,18 @@ class TrainingSchedule:
         self.D_lrate = D_lrate_dict.get(self.resolution, D_lrate_base)
         self.tick_kimg = tick_kimg_dict.get(self.resolution, tick_kimg_base)
 
+def test_discriminator(D, tensor):
+    K_logits_out, fake_logit_out, features_out = fp32(D.get_output_for(tensor, is_training=False))
+    return (K_logits_out, fake_logit_out, features_out)
+
+
+def fp32(*values):
+    if len(values) == 1 and isinstance(values[0], tuple):
+        values = values[0]
+    values = tuple(tf.cast(v, tf.float32) for v in values)
+    return values if len(values) >= 2 else values[0]
+
+
 #----------------------------------------------------------------------------
 # Main training script.
 # To run, comment/uncomment appropriate lines in config.py and launch train.py.
@@ -179,34 +192,55 @@ def train_progressive_gan(
 
     print('Building TensorFlow graph...')
     with tf.name_scope('Inputs'):
-        lod_in          = tf.placeholder(tf.float32, name='lod_in', shape=[])
-        lrate_in        = tf.placeholder(tf.float32, name='lrate_in', shape=[])
-        minibatch_in    = tf.placeholder(tf.int32, name='minibatch_in', shape=[])
-        minibatch_split = minibatch_in // config.num_gpus
-        reals, labels   = training_set.get_minibatch_tf()
-        unlabeled_reals, _ = unlabeled_training_set.get_minibatch_tf()
-        reals_split     = tf.split(reals, config.num_gpus)
-        unlabeled_reals_split = tf.split(unlabeled_reals, config.num_gpus)
-        labels_split    = tf.split(labels, config.num_gpus)
+        lod_in                          = tf.placeholder(tf.float32, name='lod_in', shape=[])
+        lrate_in                        = tf.placeholder(tf.float32, name='lrate_in', shape=[])
+        minibatch_in                    = tf.placeholder(tf.int32, name='minibatch_in', shape=[])
+
+        minibatch_split                 = minibatch_in // config.num_gpus
+        reals, labels                   = training_set.get_minibatch_tf()
+        unlabeled_reals, _              = unlabeled_training_set.get_minibatch_tf()
+
+        reals_split                     = tf.split(reals, config.num_gpus)
+        unlabeled_reals_split           = tf.split(unlabeled_reals, config.num_gpus)
+
+        labels_split                    = tf.split(labels, config.num_gpus)
+
     G_opt = tfutil.Optimizer(name='TrainG', learning_rate=lrate_in, **config.G_opt)
+    G_opt_pggan = tfutil.Optimizer(name='TrainG_pggan', learning_rate=lrate_in, **config.G_opt)
+    D_opt_pggan = tfutil.Optimizer(name='TrainD_pggan', learning_rate=lrate_in, **config.D_opt)
     D_opt = tfutil.Optimizer(name='TrainD', learning_rate=lrate_in, **config.D_opt)
+
+    print("CUDA_VISIBLE_DEVICES: ", os.environ['CUDA_VISIBLE_DEVICES'])
+
     for gpu in range(config.num_gpus):
         with tf.name_scope('GPU%d' % gpu), tf.device('/gpu:%d' % gpu):
             G_gpu = G if gpu == 0 else G.clone(G.name + '_shadow')
             D_gpu = D if gpu == 0 else D.clone(D.name + '_shadow')
+
             lod_assign_ops = [tf.assign(G_gpu.find_var('lod'), lod_in), tf.assign(D_gpu.find_var('lod'), lod_in)]
+
             reals_gpu = process_reals(reals_split[gpu], lod_in, mirror_augment, training_set.dynamic_range, drange_net)
-            unlabeled_reals_gpu = process_reals(unlabeled_reals_split[gpu], lod_in, mirror_augment, training_set.dynamic_range, drange_net)
+            unlabeled_reals_gpu = process_reals(unlabeled_reals_split[gpu], lod_in, mirror_augment, unlabeled_training_set.dynamic_range, drange_net)
+
             labels_gpu = labels_split[gpu]
             with tf.name_scope('G_loss'), tf.control_dependencies(lod_assign_ops):
                 G_loss = tfutil.call_func_by_name(G=G_gpu, D=D_gpu, opt=G_opt, training_set=training_set, minibatch_size=minibatch_split, unlabeled_reals=unlabeled_reals_gpu, **config.G_loss)
+            with tf.name_scope('G_loss_pggan'), tf.control_dependencies(lod_assign_ops):
+                G_loss_pggan = tfutil.call_func_by_name(G=G_gpu, D=D_gpu, opt=G_opt, training_set=training_set, minibatch_size=minibatch_split, **config.G_loss_pggan)
+
             with tf.name_scope('D_loss'), tf.control_dependencies(lod_assign_ops):
                 D_loss = tfutil.call_func_by_name(G=G_gpu, D=D_gpu, opt=D_opt, training_set=training_set, minibatch_size=minibatch_split, reals=reals_gpu, labels=labels_gpu, unlabeled_reals=unlabeled_reals_gpu, **config.D_loss)
-            
+            with tf.name_scope('D_loss_pggan'), tf.control_dependencies(lod_assign_ops):
+                D_loss_pggan = tfutil.call_func_by_name(G=G_gpu, D=D_gpu, opt=D_opt, training_set=training_set, minibatch_size=minibatch_split, unlabeled_reals=unlabeled_reals_gpu, **config.D_loss_pggan)
             G_opt.register_gradients(tf.reduce_mean(G_loss), G_gpu.trainables)
+            G_opt_pggan.register_gradients(tf.reduce_mean(G_loss_pggan), G_gpu.trainables)
+            D_opt_pggan.register_gradients(tf.reduce_mean(D_loss_pggan), D_gpu.trainables)
             D_opt.register_gradients(tf.reduce_mean(D_loss), D_gpu.trainables)
             print('GPU %d loaded!' % gpu)
+
     G_train_op = G_opt.apply_updates()
+    G_train_op_pggan = G_opt_pggan.apply_updates()
+    D_train_op_pggan = D_opt_pggan.apply_updates()
     D_train_op = D_opt.apply_updates()
 
     print('Setting up snapshot image grid...')
@@ -218,12 +252,13 @@ def train_progressive_gan(
     result_subdir = misc.create_result_subdir(config.result_dir, config.desc)
     misc.save_image_grid(grid_reals, os.path.join(result_subdir, 'reals.png'), drange=training_set.dynamic_range, grid_size=grid_size)
     misc.save_image_grid(grid_fakes, os.path.join(result_subdir, 'fakes%06d.png' % 0), drange=drange_net, grid_size=grid_size)
-    summary_log = tf.summary.FileWriter(result_subdir)
+    summary_log = tf.compat.v1.summary.FileWriter(result_subdir)
     if save_tf_graph:
         summary_log.add_graph(tf.get_default_graph())
     if save_weight_histograms:
         G.setup_weight_histograms(); D.setup_weight_histograms()
 
+    print("Start Time: ",datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     print('Training...')
     cur_nimg = int(resume_kimg * TrainingSpeedInt)
     cur_tick = 0
@@ -231,6 +266,8 @@ def train_progressive_gan(
     tick_start_time = time.time()
     train_start_time = tick_start_time - resume_time
     prev_lod = -1.0
+
+
     while cur_nimg < total_kimg * TrainingSpeedInt:
 
         # Choose training parameters and configure training ops.
@@ -241,14 +278,25 @@ def train_progressive_gan(
         if reset_opt_for_new_lod:
             if np.floor(sched.lod) != np.floor(prev_lod) or np.ceil(sched.lod) != np.ceil(prev_lod):
                 G_opt.reset_optimizer_state(); D_opt.reset_optimizer_state()
+                G_opt_pggan.reset_optimizer_state(); D_opt_pggan.reset_optimizer_state()
         prev_lod = sched.lod
 
         # Run training ops.
         for repeat in range(minibatch_repeats):
             for _ in range(D_repeats):
-                tfutil.run([D_train_op, Gs_update_op], {lod_in: sched.lod, lrate_in: sched.D_lrate, minibatch_in: sched.minibatch})
+                # Run the Pggan loss if lod != 0 else run SSL loss with feature matching
+                if sched.lod == 0:
+                    tfutil.run([D_train_op, Gs_update_op], {lod_in: sched.lod, lrate_in: sched.D_lrate, minibatch_in: sched.minibatch})
+                else:
+                    tfutil.run([D_train_op_pggan, Gs_update_op], {lod_in: sched.lod, lrate_in: sched.D_lrate, minibatch_in: sched.minibatch})
                 cur_nimg += sched.minibatch
-            tfutil.run([G_train_op], {lod_in: sched.lod, lrate_in: sched.G_lrate, minibatch_in: sched.minibatch})
+                #tmp = min(tick_start_nimg + sched.tick_kimg * TrainingSpeedInt, total_kimg * TrainingSpeedInt)
+                #print("Tick progress:  {}/{}".format(cur_nimg, tmp), end="\r", flush=True)
+            # Run the Pggan loss if lod != 0 else run SSL loss with feature matching
+            if sched.lod == 0:
+                tfutil.run([G_train_op], {lod_in: sched.lod, lrate_in: sched.G_lrate, minibatch_in: sched.minibatch})
+            else:
+                tfutil.run([G_train_op_pggan], {lod_in: sched.lod, lrate_in: sched.G_lrate, minibatch_in: sched.minibatch})
 
         # Perform maintenance tasks once per tick.
         done = (cur_nimg >= total_kimg * TrainingSpeedInt)
@@ -276,7 +324,53 @@ def train_progressive_gan(
 
             tfutil.autosummary('Timing/total_hours', total_time / (60.0 * 60.0))
             tfutil.autosummary('Timing/total_days', total_time / (24.0 * 60.0 * 60.0))
+
+
+            #######################
+            # VALIDATION ACCURACY #
+            #######################
+
+            # example ndim = 512 for an image that is 512x512 pixels
+            # All images for SSL-PGGAN must be square
+            ndim = 256
+            correct=0
+            guesses=0
+
+            validation_dog = '/home/jack/WORKHERE/SSL-PG-GAN/CatVDog/PetImages/validation_dog/'
+            validation_cat = '/home/jack/WORKHERE/SSL-PG-GAN/CatVDog/PetImages/validation_cat/'
+            dir_tuple = (validation_dog, validation_cat)
+            # If guessed the wrong class seeing if there is a bias
+            FP_RATE=[[0],[0]]
+            # For each class
+            for indx, directory in enumerate(dir_tuple):
+                # Go through every image that needs to be tested
+                for filename in os.listdir(directory):
+                    guesses+=1
+                    #tensor = np.zeros((1, 3, 512, 512))
+                    print(filename)
+                    img = np.asarray(PIL.Image.open(directory + filename)).reshape(3,ndim,ndim)
+                    img = np.expand_dims(img, axis=0) # makes the image (1,3,512,512)
+                    K_logits_out, fake_logit_out, features_out = test_discriminator(D, img)
+
+                    #print("K Logits Out:",K_logits_out.eval())
+                    sample_probs = tf.nn.softmax(K_logits_out)
+                    #print("Softmax Output:", sample_probs.eval())
+                    label = np.argmax(sample_probs.eval()[0], axis=0)
+                    if label == indx:
+                        correct += 1
+                    else:
+                        FP_RATE[indx][0] += 1
+                    print("-----------------------------------")
+                    print("GUESSED LABEL: ",label)
+                    print("CORRECT LABEL: ",indx)
+                    validation = (correct/guesses)
+                    print("Total Correct: ", correct, "\n", "Total Guesses: ", guesses, "\n", "Percent correct: ", validation)
+                    print("False Positives: Dog, Cat",FP_RATE)
+                    print()
+
+            tfutil.autosummary('Accuracy/Validation', (correct/guesses))
             tfutil.save_summaries(summary_log, cur_nimg)
+
 
             # Save snapshots.
             if cur_tick % image_snapshot_ticks == 0 or done:
@@ -310,3 +404,4 @@ if __name__ == "__main__":
     print('Exiting...')
 
 #----------------------------------------------------------------------------
+
