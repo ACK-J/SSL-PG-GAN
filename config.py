@@ -21,6 +21,9 @@ class EasyDict(dict):
 data_dir = '/home/USERNAME/SSL-PG-GAN/'			# CHANGE ME
 unlabeled_data_dir = '/home/USERNAME/SSL-PG-GAN/'	# CHANGE ME
 result_dir = 'results'
+# These directories should hold 5 - 10 out of sample images
+validation_dog = '/home/USERNAME/SSL-PG-GAN/CatVDog/PetImages/validation_dog/' # CHANGE ME
+validation_cat = '/home/USERNAME/SSL-PG-GAN/CatVDog/PetImages/validation_cat/' # CHANGE ME
 
 #----------------------------------------------------------------------------
 # TensorFlow options.

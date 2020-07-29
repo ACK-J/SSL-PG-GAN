@@ -336,9 +336,7 @@ def train_progressive_gan(
             correct=0
             guesses=0
 
-            validation_dog = '/home/jack/WORKHERE/SSL-PG-GAN/CatVDog/PetImages/validation_dog/'
-            validation_cat = '/home/jack/WORKHERE/SSL-PG-GAN/CatVDog/PetImages/validation_cat/'
-            dir_tuple = (validation_dog, validation_cat)
+            dir_tuple = (config.validation_dog, config.validation_cat)
             # If guessed the wrong class seeing if there is a bias
             FP_RATE=[[0],[0]]
             # For each class
