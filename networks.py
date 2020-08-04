@@ -250,7 +250,7 @@ def D_paper(
     mbstd_group_size    = 4,            # Group size for the minibatch standard deviation layer, 0 = disable.
     dtype               = 'float32',    # Data type to use for activations and outputs.
     fused_scale         = True,         # True = use fused conv2d + downscale2d, False = separate downscale2d layers.
-    structure           = None,         # 'linear' = human-readable, 'recursive' = efficient, None = select automatically
+    structure           = 'recursive',         # 'linear' = human-readable, 'recursive' = efficient, None = select automatically
     is_template_graph   = False,        # True = template graph constructed by the Network class, False = actual evaluation.
     **kwargs):                          # Ignore unrecognized keyword args.
     
@@ -278,22 +278,27 @@ def D_paper(
                 if fused_scale:
                     with tf.variable_scope('Conv1_down'):
                         x = act(apply_bias(conv2d_downscale2d(x, fmaps=nf(res-2), kernel=3, use_wscale=use_wscale)))
-                        features = x
                 else:
                     with tf.variable_scope('Conv1'):
                         x = act(apply_bias(conv2d(x, fmaps=nf(res-2), kernel=3, use_wscale=use_wscale)))
-                    features = x
                     x = downscale2d(x)
             else: # 4x4
                 if mbstd_group_size > 1:
                     x = minibatch_stddev_layer(x, mbstd_group_size)
                 with tf.variable_scope('Conv'):
                     x = act(apply_bias(conv2d(x, fmaps=nf(res-1), kernel=3, use_wscale=use_wscale)))
-                    features = x
+                    flatten = x.get_shape().as_list()[1] * x.get_shape().as_list()[2] * x.get_shape().as_list()[3]
+                    features = tf.reshape(x, (-1, flatten)) # used for "Feature Matching"
                 with tf.variable_scope('Dense0'):
                     x = act(apply_bias(dense(x, fmaps=nf(res-2), use_wscale=use_wscale)))
                 with tf.variable_scope('Dense1'):
                     x = apply_bias(dense(x, fmaps=1+label_size, gain=1, use_wscale=use_wscale))
+                    print(x.get_shape())
+            
+                    flatten = x.get_shape().as_list()[1] * x.get_shape().as_list()[2] * x.get_shape().as_list()[3]
+                    features = tf.reshape(x, (-1, flatten)) # used for "Feature Matching"
+                    print(features)
+                    exit()
             return x, features
     
     # Linear structure: simple but inefficient.
@@ -322,10 +327,11 @@ def D_paper(
                 y = cset(y, (lod_in > lod), lambda: lerp(x, fromrgb(downscale2d(images_in, 2**(lod+1)), res - 1), lod_in - lod))
             return y(), features_out
         combo_out, features_out = grow(2, resolution_log2 - 2)
-
+    
     features_out = tf.identity(features_out, name='features_out')
     fake_logit_out = tf.identity(combo_out[:, :1], name='fake_logit_out')
     K_logits_out = tf.identity(combo_out[:, 1:], name='K_logits_out') 
+    print('net',features_out)
     return K_logits_out, fake_logit_out, features_out
 
 #----------------------------------------------------------------------------

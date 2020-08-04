@@ -171,7 +171,7 @@ def finalize_autosummaries():
                 with tf.control_dependencies([avg]): # read before resetting
                     reset_ops = [tf.assign(var, tf.zeros(2)) for var in vars]
                     with tf.name_scope(None), tf.control_dependencies(reset_ops): # reset before reporting
-                        tf.summary.scalar(name, avg)
+                        tf.compat.v1.summary.scalar(name, avg)
 
 # Internal helper for creating autosummary accumulators.
 def _create_autosummary_var(name, value_expr):
@@ -204,7 +204,7 @@ def save_summaries(filewriter, global_step=None):
     if _summary_merge_op is None:
         finalize_autosummaries()
         with tf.device(None), tf.control_dependencies(None):
-            _summary_merge_op = tf.summary.merge_all()
+            _summary_merge_op = tf.compat.v1.summary.merge_all()
     filewriter.add_summary(_summary_merge_op.eval(), global_step)
 
 #----------------------------------------------------------------------------
@@ -248,7 +248,7 @@ class Optimizer:
     def __init__(
         self,
         name                = 'Train',
-        tf_optimizer        = 'tf.train.AdamOptimizer',
+        tf_optimizer        = 'tf.compat.v1.train.AdamOptimizer',
         learning_rate       = 0.001,
         use_loss_scaling    = False,
         loss_scaling_init   = 64.0,
@@ -297,7 +297,7 @@ class Optimizer:
                 self._dev_opt[dev] = self.optimizer_class(name=opt_name, learning_rate=self.learning_rate, **self.optimizer_kwargs)
                 self._dev_grads[dev] = []
             loss = self.apply_loss_scaling(tf.cast(loss, tf.float32))
-            grads = self._dev_opt[dev].compute_gradients(loss, vars, gate_gradients=tf.train.Optimizer.GATE_NONE) # disable gating to reduce memory usage
+            grads = self._dev_opt[dev].compute_gradients(loss, vars, gate_gradients=tf.compat.v1.train.Optimizer.GATE_NONE) # disable gating to reduce memory usage
             grads = [(g, v) if g is not None else (tf.zeros_like(v), v) for g, v in grads] # replace disconnected gradients with zeros
             self._dev_grads[dev].append(grads)
 

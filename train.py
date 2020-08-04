@@ -12,7 +12,7 @@ import tensorflow as tf
 import warnings
 warnings.filterwarnings('ignore',category=FutureWarning)
 warnings.filterwarnings('ignore', category=DeprecationWarning)
-
+from collections import OrderedDict
 import config
 import tfutil
 import dataset
@@ -162,9 +162,9 @@ def train_progressive_gan(
     network_snapshot_ticks  = 10,           # How often to export network snapshots?
     save_tf_graph           = False,        # Include full TensorFlow computation graph in the tfevents file?
     save_weight_histograms  = False,        # Include weight histograms in the tfevents file?
-    resume_run_id           = None,         # Run ID or network pkl to resume training from, None = start from scratch.
+    resume_run_id           = 8,         # Run ID or network pkl to resume training from, None = start from scratch.
     resume_snapshot         = None,         # Snapshot index to resume training from, None = autodetect.
-    resume_kimg             = 0.0,          # Assumed training progress at the beginning. Affects reporting and training schedule.
+    resume_kimg             = 7000.0,          # Assumed training progress at the beginning. Affects reporting and training schedule.
     resume_time             = 0.0):         # Assumed wallclock time at the beginning. Affects reporting.
 
     maintenance_start_time = time.time()
@@ -232,10 +232,23 @@ def train_progressive_gan(
                 D_loss = tfutil.call_func_by_name(G=G_gpu, D=D_gpu, opt=D_opt, training_set=training_set, minibatch_size=minibatch_split, reals=reals_gpu, labels=labels_gpu, unlabeled_reals=unlabeled_reals_gpu, **config.D_loss)
             with tf.name_scope('D_loss_pggan'), tf.control_dependencies(lod_assign_ops):
                 D_loss_pggan = tfutil.call_func_by_name(G=G_gpu, D=D_gpu, opt=D_opt, training_set=training_set, minibatch_size=minibatch_split, unlabeled_reals=unlabeled_reals_gpu, **config.D_loss_pggan)
+
+
+            # Getting rid of the conv0 layer so we can freeze it duringin training
+            Freeze_conv = OrderedDict([(D_gpu.get_var_localname(var), var) for var in tf.global_variables(D_gpu.scope + '/')])
+            keysToPop = []
+            for key,val in Freeze_conv.items():
+                if 'Conv0' in key:
+                    keysToPop.append(key)
+            for i in keysToPop:
+                Freeze_conv.pop(i)
+            for key,value in Freeze_conv.items():
+	            print("key : {0},value : {1}".format(key,value))
+
             G_opt.register_gradients(tf.reduce_mean(G_loss), G_gpu.trainables)
             G_opt_pggan.register_gradients(tf.reduce_mean(G_loss_pggan), G_gpu.trainables)
-            D_opt_pggan.register_gradients(tf.reduce_mean(D_loss_pggan), D_gpu.trainables)
-            D_opt.register_gradients(tf.reduce_mean(D_loss), D_gpu.trainables)
+            D_opt_pggan.register_gradients(tf.reduce_mean(D_loss_pggan), Freeze_conv)
+            D_opt.register_gradients(tf.reduce_mean(D_loss), Freeze_conv)
             print('GPU %d loaded!' % gpu)
 
     G_train_op = G_opt.apply_updates()
@@ -290,8 +303,6 @@ def train_progressive_gan(
                 else:
                     tfutil.run([D_train_op_pggan, Gs_update_op], {lod_in: sched.lod, lrate_in: sched.D_lrate, minibatch_in: sched.minibatch})
                 cur_nimg += sched.minibatch
-                #tmp = min(tick_start_nimg + sched.tick_kimg * TrainingSpeedInt, total_kimg * TrainingSpeedInt)
-                #print("Tick progress:  {}/{}".format(cur_nimg, tmp), end="\r", flush=True)
             # Run the Pggan loss if lod != 0 else run SSL loss with feature matching
             if sched.lod == 0:
                 tfutil.run([G_train_op], {lod_in: sched.lod, lrate_in: sched.G_lrate, minibatch_in: sched.minibatch})
@@ -336,9 +347,7 @@ def train_progressive_gan(
             correct=0
             guesses=0
 
-            validation_dog = '/home/jack/WORKHERE/SSL-PG-GAN/CatVDog/PetImages/validation_dog/'
-            validation_cat = '/home/jack/WORKHERE/SSL-PG-GAN/CatVDog/PetImages/validation_cat/'
-            dir_tuple = (validation_dog, validation_cat)
+            dir_tuple = (config.validation_dog, config.validation_cat)
             # If guessed the wrong class seeing if there is a bias
             FP_RATE=[[0],[0]]
             # For each class
