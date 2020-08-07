@@ -117,10 +117,10 @@ To create the `cat/dogs` dataset (Or any dataset of images) run the following co
 # Configuration
 Edit `config.py` to see all of the options available. 
 
-You must change two lines in the configuration file before training the model. 
+You must change four lines in the configuration file before training the model. 
 
-They are both commented with `# CHANGE ME` and are the paths to the parent directory of the labeled and unlabeled data folders holding the `.tfrecord` files. This should normally just be the path to the 
-SSL-PG-GAN folder.
+They are commented with `# CHANGE ME` and are the paths to the parent directory of the labeled and unlabeled data folders holding the `.tfrecord` files. This should normally just be the path to the 
+SSL-PG-GAN folder. The other two paths are to the validation folders which should be out of sample images used to test your model. 
 
 Other configuration changes include changing the amount of Nvidia GPU's used.
 - Note if you want to select multiple GPU's make sure the environment variable
