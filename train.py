@@ -152,7 +152,7 @@ def fp32(*values):
 
 def train_progressive_gan(
     G_smoothing             = 0.999,        # Exponential running average of generator weights.
-    D_repeats               = 1,            # How many times the discriminator is trained per G iteration.
+    D_repeats               = 2,            # How many times the discriminator is trained per G iteration.
     minibatch_repeats       = 4,            # Number of minibatches to run before adjusting training parameters.
     reset_opt_for_new_lod   = True,         # Reset optimizer internal state (e.g. Adam moments) when new layers are introduced?
     total_kimg              = 15000,        # Total length of the training, measured in thousands of real images.
@@ -298,16 +298,17 @@ def train_progressive_gan(
         for repeat in range(minibatch_repeats):
             for _ in range(D_repeats):
                 # Run the Pggan loss if lod != 0 else run SSL loss with feature matching
-                if sched.lod == 0:
-                    tfutil.run([D_train_op, Gs_update_op], {lod_in: sched.lod, lrate_in: sched.D_lrate, minibatch_in: sched.minibatch})
-                else:
-                    tfutil.run([D_train_op_pggan, Gs_update_op], {lod_in: sched.lod, lrate_in: sched.D_lrate, minibatch_in: sched.minibatch})
+                #if sched.lod == 0:
+                #    tfutil.run([D_train_op, Gs_update_op], {lod_in: sched.lod, lrate_in: sched.D_lrate, minibatch_in: sched.minibatch})
+                #else:
+                #    tfutil.run([D_train_op_pggan, Gs_update_op], {lod_in: sched.lod, lrate_in: sched.D_lrate, minibatch_in: sched.minibatch})
+                tfutil.run([D_train_op], {lod_in: sched.lod, lrate_in: sched.D_lrate, minibatch_in: sched.minibatch})
                 cur_nimg += sched.minibatch
             # Run the Pggan loss if lod != 0 else run SSL loss with feature matching
-            if sched.lod == 0:
-                tfutil.run([G_train_op], {lod_in: sched.lod, lrate_in: sched.G_lrate, minibatch_in: sched.minibatch})
-            else:
-                tfutil.run([G_train_op_pggan], {lod_in: sched.lod, lrate_in: sched.G_lrate, minibatch_in: sched.minibatch})
+            #if sched.lod == 0:
+            #    tfutil.run([G_train_op], {lod_in: sched.lod, lrate_in: sched.G_lrate, minibatch_in: sched.minibatch})
+            #else:
+            #    tfutil.run([G_train_op_pggan], {lod_in: sched.lod, lrate_in: sched.G_lrate, minibatch_in: sched.minibatch})
 
         # Perform maintenance tasks once per tick.
         done = (cur_nimg >= total_kimg * TrainingSpeedInt)

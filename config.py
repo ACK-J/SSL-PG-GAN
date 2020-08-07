@@ -18,9 +18,11 @@ class EasyDict(dict):
 #----------------------------------------------------------------------------
 # Paths.
 
-data_dir = '/home/USERNAME/SSL-PG-GAN/'			# CHANGE ME
-unlabeled_data_dir = '/home/USERNAME/SSL-PG-GAN/'	# CHANGE ME
+data_dir = '/home/jack/WORKHERE/SSL-PG-GAN/'			# CHANGE ME
+unlabeled_data_dir = '/home/jack/WORKHERE/SSL-PG-GAN/'	# CHANGE ME
 result_dir = 'results'
+validation_dog = '/home/jack/WORKHERE/SSL-PG-GAN/CatVDog/PetImages/validation_dog/' # CHANGE ME
+validation_cat = '/home/jack/WORKHERE/SSL-PG-GAN/CatVDog/PetImages/validation_cat/' # CHANGE ME
 
 #----------------------------------------------------------------------------
 # TensorFlow options.
@@ -37,7 +39,7 @@ env.TF_CPP_MIN_LOG_LEVEL                        = '1'       # 0 (default) = Prin
 # Official training configs, targeted mainly for CelebA-HQ.
 # To run, comment/uncomment the lines as appropriate and launch train.py.
 
-desc        = 'ssl-pgan'                                        # Description string included in result subdir name.
+desc        = 'ssl-pgan'                                    # Description string included in result subdir name.
 random_seed = 1000                                          # Global random seed.
 dataset     = EasyDict()                                    # Options for dataset.load_dataset().
 train       = EasyDict(func='train.train_progressive_gan')  # Options for main training func.
@@ -46,6 +48,8 @@ D           = EasyDict(func='networks.D_paper')             # Options for discri
 G_opt       = EasyDict(beta1=0.0, beta2=0.99, epsilon=1e-8) # Options for generator optimizer.
 D_opt       = EasyDict(beta1=0.0, beta2=0.99, epsilon=1e-8) # Options for discriminator optimizer.
 G_loss      = EasyDict(func='loss.G_wgan_acgan')            # Options for generator loss.
+G_loss_pggan= EasyDict(func='loss.G_pggan_loss')            # Options for generator loss using SSL
+D_loss_pggan= EasyDict(func='loss.D_pggan_loss')            # Options for generator loss using SSL
 D_loss      = EasyDict(func='loss.D_wgangp_acgan')          # Options for discriminator loss.
 sched       = EasyDict()                                    # Options for train.TrainingSchedule.
 grid        = EasyDict(size='1080p', layout='random')       # Options for train.setup_snapshot_image_grid().
@@ -54,16 +58,16 @@ grid        = EasyDict(size='1080p', layout='random')       # Options for train.
 desc += '-sslpggan';            dataset = EasyDict(tfrecord_dir='Labeled'); unlabeled_dataset = EasyDict(tfrecord_dir='Unlabeled')
 
 # Conditioning & snapshot options.
-#desc += '-cond'; dataset.max_label_size = 'full' # conditioned on full label
+desc += '-cond'; dataset.max_label_size = 'full' # conditioned on full label
 #desc += '-cond1'; dataset.max_label_size = 1 # conditioned on first component of the label
 #desc += '-g4k'; grid.size = '4k'
 #desc += '-grpc'; grid.layout = 'row_per_class'
 
 # Config presets (choose one).
-desc += '-preset-v1-1gpu'; num_gpus = 1; D.mbstd_group_size = 16; sched.minibatch_base = 16; sched.minibatch_dict = {256: 14, 512: 6, 1024: 3}; sched.lod_training_kimg = 800; sched.lod_transition_kimg = 800; train.total_kimg = 19000
+#desc += '-preset-v1-1gpu'; num_gpus = 1; D.mbstd_group_size = 16; sched.minibatch_base = 16; sched.minibatch_dict = {256: 14, 512: 6, 1024: 3}; sched.lod_training_kimg = 800; sched.lod_transition_kimg = 800; train.total_kimg = 19000
 #desc += '-preset-v2-1gpu'; num_gpus = 1; sched.minibatch_base = 4; sched.minibatch_dict = {4: 128, 8: 128, 16: 128, 32: 64, 64: 32, 128: 16, 256: 8, 512: 4}; sched.G_lrate_dict = {1024: 0.0015}; sched.D_lrate_dict = EasyDict(sched.G_lrate_dict); train.total_kimg = 12000
-#desc += '-preset-v2-2gpus'; num_gpus = 2; sched.minibatch_base = 8; sched.minibatch_dict = {4: 256, 8: 256, 16: 128, 32: 64, 64: 32, 128: 16, 256: 8}; sched.G_lrate_dict = {512: 0.0015, 1024: 0.002}; sched.D_lrate_dict = EasyDict(sched.G_lrate_dict); train.total_kimg = 12000
-#desc += '-preset-v2-4gpus'; num_gpus = 4; sched.minibatch_base = 16; sched.minibatch_dict = {4: 512, 8: 256, 16: 128, 32: 64, 64: 32, 128: 16}; sched.G_lrate_dict = {256: 0.0015, 512: 0.002, 1024: 0.003}; sched.D_lrate_dict = EasyDict(sched.G_lrate_dict); train.total_kimg = 12000
+#desc += '-preset-v2-2gpus'; num_gpus = 2; sched.minibatch_base = 8; sched.minibatch_dict = {4: 256, 8: 256, 16: 128, 32: 64, 64: 32, 128: 16, 256: 8}; sched.G_lrate_dict = {512: 0.0015, 1024: 0.002}; sched.D_lrate_dict = EasyDict(sched.G_lrate_dict); train.total_kimg = 12000;sched.lod_training_kimg = 320; sched.lod_transition_kimg = 320
+desc += '-preset-v2-4gpus'; num_gpus = 4; sched.minibatch_base = 16; sched.minibatch_dict = {4: 512, 8: 256, 16: 128, 32: 64, 64: 32, 128: 16}; sched.G_lrate_dict = {256: 0.0015, 512: 0.002, 1024: 0.003}; sched.D_lrate_dict = EasyDict(sched.G_lrate_dict)
 #desc += '-preset-v2-8gpus'; num_gpus = 8; sched.minibatch_base = 32; sched.minibatch_dict = {4: 512, 8: 256, 16: 128, 32: 64, 64: 32}; sched.G_lrate_dict = {128: 0.0015, 256: 0.002, 512: 0.003, 1024: 0.003}; sched.D_lrate_dict = EasyDict(sched.G_lrate_dict); train.total_kimg = 12000
 
 # Numerical precision (choose one).
@@ -72,13 +76,13 @@ desc += '-fp32'; sched.max_minibatch_per_gpu = {256: 16, 512: 8, 1024: 4}
 #desc += '-fp16'; G.dtype = 'float16'; D.dtype = 'float16'; G.pixelnorm_epsilon=1e-4; G_opt.use_loss_scaling = True; D_opt.use_loss_scaling = True; sched.max_minibatch_per_gpu = {512: 16, 1024: 8}
 
 # Disable individual features.
-#desc += '-nogrowing'; sched.lod_initial_resolution = 1024; sched.lod_training_kimg = 0; sched.lod_transition_kimg = 0; train.total_kimg = 10000
+desc += '-nogrowing'; sched.lod_initial_resolution = 1024; sched.lod_training_kimg = 0; sched.lod_transition_kimg = 0; train.total_kimg = 100000
 #desc += '-nopixelnorm'; G.use_pixelnorm = False
 #desc += '-nowscale'; G.use_wscale = False; D.use_wscale = False
 #desc += '-noleakyrelu'; G.use_leakyrelu = False
 #desc += '-nosmoothing'; train.G_smoothing = 0.0
 #desc += '-norepeat'; train.minibatch_repeats = 1
-#desc += '-noreset'; train.reset_opt_for_new_lod = False
+desc += '-noreset'; train.reset_opt_for_new_lod = False
 
 # Special modes.
 #desc += '-BENCHMARK'; sched.lod_initial_resolution = 4; sched.lod_training_kimg = 3; sched.lod_transition_kimg = 3; train.total_kimg = (8*2+1)*3; sched.tick_kimg_base = 1; sched.tick_kimg_dict = {}; train.image_snapshot_ticks = 1000; train.network_snapshot_ticks = 1000
