@@ -105,11 +105,11 @@ The One-Liner:
    - If you do not want your pictures to be `256x256` then change it and make sure to leave the `!` where it is
    - The `\{}` is where the file names that the find command gets are placed.
 
-**NOTE:This command will overwrite the files when it converts them to be the fixed size**
+**NOTE: This command will overwrite the files when it converts them to be the fixed size**
 
 To create the `cat/dogs` dataset (Or any dataset of images) run the following command...
 
-`python3 dataset_tool.py <Labeled dir> <Unlabeled dir> 2> /dev/null`
+`python3 dataset_tool.py <Labeled dir> <Unlabeled dir>`
 - Make sure to use full paths for both Labeled and Unlabeled datasets holding your images.
 - The reason that I send stderr to `/dev/null` is because the version of tensorflow has very noisy deprecation warnings. 
 - Now if you look in the `Labeled` and `Unlabeled` directories you should see a bunch of `.tfrecord` files
